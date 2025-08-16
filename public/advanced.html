@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skya Advanced Freight Consolidation - Multi-Order Optimization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .order-card { transition: all 0.3s ease; }
+        .order-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2 rounded-lg">
+                        <i data-lucide="truck" class="h-8 w-8 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Skya Advanced Freight Consolidation</h1>
+                        <p class="text-sm text-gray-600">Multi-order optimization with smart consolidation</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-blue-600 hover:text-blue-800 text-sm">← Basic Mode</a>
+                    <div class="bg-green-100 px-3 py-1 rounded-full">
+                        <span class="text-xs font-medium text-green-800">Advanced Mode</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Introduction -->
+        <div class="text-center mb-8 fade-in">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Advanced Multi-Order Consolidation</h2>
+            <p class="text-lg text-gray-600 max-w-4xl mx-auto">
+                Optimize freight costs by consolidating multiple orders. Our AI analyzes truck utilization, 
+                wait times, and cost savings to recommend the best consolidation strategy.
+            </p>
+        </div>
+
+        <!-- Orders Management Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Order Input Panel -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">Add Orders</h3>
+                        <span id="order-count" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">0 orders</span>
+                    </div>
+
+                    <form id="order-form" class="space-y-6">
+                        <!-- Customer Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
+                                <input type="text" id="customerName" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="Customer or company name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Contact Info</label>
+                                <input type="text" id="contactInfo" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="Phone or email">
+                            </div>
+                        </div>
+
+                        <!-- Route Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Location *</label>
+                                    <select id="source" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select pickup city</option>
+                                        <option value="Sydney, NSW">Sydney, NSW</option>
+                                        <option value="Melbourne, VIC">Melbourne, VIC</option>
+                                        <option value="Brisbane, QLD">Brisbane, QLD</option>
+                                        <option value="Perth, WA">Perth, WA</option>
+                                        <option value="Adelaide, SA">Adelaide, SA</option>
+                                        <option value="Gold Coast, QLD">Gold Coast, QLD</option>
+                                        <option value="Newcastle, NSW">Newcastle, NSW</option>
+                                        <option value="Canberra, ACT">Canberra, ACT</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Address</label>
+                                    <textarea id="pickupAddress" rows="2"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                              placeholder="Full pickup address (optional)"></textarea>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Location *</label>
+                                    <select id="destination" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select delivery city</option>
+                                        <option value="Sydney, NSW">Sydney, NSW</option>
+                                        <option value="Melbourne, VIC">Melbourne, VIC</option>
+                                        <option value="Brisbane, QLD">Brisbane, QLD</option>
+                                        <option value="Perth, WA">Perth, WA</option>
+                                        <option value="Adelaide, SA">Adelaide, SA</option>
+                                        <option value="Gold Coast, QLD">Gold Coast, QLD</option>
+                                        <option value="Newcastle, NSW">Newcastle, NSW</option>
+                                        <option value="Canberra, ACT">Canberra, ACT</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
+                                    <textarea id="deliveryAddress" rows="2"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                              placeholder="Full delivery address (optional)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pallet Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Number of Pallets *</label>
+                                <input type="number" id="palletCount" required min="1" max="100" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="Pallets">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pallet Size *</label>
+                                <select id="palletSize" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="standard">Standard (1200×1200×1200mm)</option>
+                                    <option value="euro">Euro (1200×800×1200mm)</option>
+                                    <option value="half">Half (600×1200×1200mm)</option>
+                                    <option value="quarter">Quarter (600×800×1200mm)</option>
+                                    <option value="oversized">Oversized (1200×1200×1800mm)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Urgency *</label>
+                                <select id="urgency" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="standard">Standard (2-3 days)</option>
+                                    <option value="express">Express (1-2 days)</option>
+                                    <option value="urgent">Urgent (Same/Next day)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Timing Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Date *</label>
+                                <input type="date" id="pickupDate" required 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Date *</label>
+                                <input type="date" id="deliveryDate" required 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- Special Requirements -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Special Requirements</label>
+                            <textarea id="specialRequirements" rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      placeholder="Fragile, temperature controlled, hazardous materials, etc."></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg">
+                            <i data-lucide="plus" class="h-5 w-5 inline mr-2"></i>
+                            Add Order to Batch
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Consolidation Controls -->
+                <div id="consolidation-controls" class="bg-white rounded-xl shadow-lg p-6" style="display: none;">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Consolidation Analysis</h3>
+                    <div class="flex flex-wrap gap-4">
+                        <button id="analyze-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg">
+                            <i data-lucide="zap" class="h-5 w-5 inline mr-2"></i>
+                            Analyze Consolidation Options
+                        </button>
+                        <button id="clear-all-btn" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg">
+                            <i data-lucide="trash-2" class="h-5 w-5 inline mr-2"></i>
+                            Clear All Orders
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Summary Panel -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-lg p-6 sticky top-8">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Current Orders</h3>
+                    <div id="orders-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-8">No orders added yet</p>
+                    </div>
+                    
+                    <div id="orders-summary" class="mt-6 pt-4 border-t border-gray-200" style="display: none;">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="text-center">
+                                <div class="font-bold text-lg text-blue-600" id="total-pallets">0</div>
+                                <div class="text-gray-600">Total Pallets</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="font-bold text-lg text-green-600" id="total-routes">0</div>
+                                <div class="text-gray-600">Routes</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Section -->
+        <div id="loading-section" class="hidden bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto my-8">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4">
+                    <i data-lucide="loader-2" class="h-12 w-12 text-blue-600"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Analyzing Consolidation Options</h3>
+                <p class="text-gray-600">Our AI is evaluating truck utilization, wait times, and cost optimization across all your orders...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden mt-8">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Consolidation Recommendations</h2>
+                <div id="consolidation-summary" class="bg-blue-50 rounded-lg p-6 max-w-4xl mx-auto">
+                    <!-- Summary will be populated here -->
+                </div>
+            </div>
+
+            <!-- Scenarios -->
+            <div id="consolidation-scenarios" class="space-y-8">
+                <!-- Scenarios will be populated here -->
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="new-batch-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg">
+                    <i data-lucide="refresh-cw" class="h-5 w-5 inline mr-2"></i>
+                    Start New Batch
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-sm text-gray-600">
+                © 2024 Skya Logistics. Advanced freight consolidation powered by AI optimization algorithms.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Global state
+        let orders = [];
+        let orderIdCounter = 1;
+
+        // Set minimum dates
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateString = tomorrow.toISOString().split('T')[0];
+        document.getElementById('pickupDate').min = dateString;
+        document.getElementById('deliveryDate').min = dateString;
+
+        // Update delivery date when pickup date changes
+        document.getElementById('pickupDate').addEventListener('change', function() {
+            const pickupDate = new Date(this.value);
+            const minDeliveryDate = new Date(pickupDate);
+            minDeliveryDate.setDate(minDeliveryDate.getDate() + 1);
+            document.getElementById('deliveryDate').min = minDeliveryDate.toISOString().split('T')[0];
+        });
+
+        // Add order form handler
+        document.getElementById('order-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            addOrder();
+        });
+
+        function addOrder() {
+            const formData = {
+                id: `ORD-${orderIdCounter++}`,
+                customerName: document.getElementById('customerName').value || 'Customer ' + orderIdCounter,
+                contactInfo: document.getElementById('contactInfo').value,
+                source: document.getElementById('source').value,
+                destination: document.getElementById('destination').value,
+                actualAddress: {
+                    pickup: document.getElementById('pickupAddress').value || null,
+                    delivery: document.getElementById('deliveryAddress').value || null
+                },
+                pallets: parseInt(document.getElementById('palletCount').value),
+                palletSize: document.getElementById('palletSize').value,
+                pickupDate: document.getElementById('pickupDate').value,
+                deliveryDate: document.getElementById('deliveryDate').value,
+                urgency: document.getElementById('urgency').value,
+                specialRequirements: document.getElementById('specialRequirements').value
+            };
+
+            // Validation
+            if (!formData.source || !formData.destination || !formData.pallets || 
+                !formData.pickupDate || !formData.deliveryDate) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            if (formData.source === formData.destination) {
+                alert('Pickup and delivery locations must be different.');
+                return;
+            }
+
+            // Add to orders array
+            orders.push(formData);
+            
+            // Update UI
+            updateOrdersList();
+            updateOrdersSummary();
+            
+            // Show consolidation controls
+            document.getElementById('consolidation-controls').style.display = 'block';
+            
+            // Reset form
+            document.getElementById('order-form').reset();
+            
+            // Success feedback
+            showNotification(`Order ${formData.id} added successfully!`, 'success');
+        }
+
+        function updateOrdersList() {
+            const ordersList = document.getElementById('orders-list');
+            const orderCount = document.getElementById('order-count');
+            
+            orderCount.textContent = `${orders.length} order${orders.length !== 1 ? 's' : ''}`;
+            
+            if (orders.length === 0) {
+                ordersList.innerHTML = '<p class="text-gray-500 text-center py-8">No orders added yet</p>';
+                return;
+            }
+
+            ordersList.innerHTML = orders.map((order, index) => `
+                <div class="order-card bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium text-sm text-gray-900">${order.id}</span>
+                        <button onclick="removeOrder(${index})" class="text-red-500 hover:text-red-700">
+                            <i data-lucide="x" class="h-4 w-4"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-gray-600 space-y-1">
+                        <div class="font-medium">${order.customerName}</div>
+                        <div>${order.source} → ${order.destination}</div>
+                        <div class="flex justify-between">
+                            <span>${order.pallets} ${order.palletSize} pallets</span>
+                            <span class="px-2 py-1 rounded text-xs ${
+                                order.urgency === 'urgent' ? 'bg-red-100 text-red-800' :
+                                order.urgency === 'express' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                            }">${order.urgency}</span>
+                        </div>
+                        <div class="text-gray-500">${formatDate(order.pickupDate)} → ${formatDate(order.deliveryDate)}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Re-initialize lucide icons for new elements
+            lucide.createIcons();
+        }
+
+        function updateOrdersSummary() {
+            const summaryDiv = document.getElementById('orders-summary');
+            const totalPalletsSpan = document.getElementById('total-pallets');
+            const totalRoutesSpan = document.getElementById('total-routes');
+            
+            if (orders.length === 0) {
+                summaryDiv.style.display = 'none';
+                return;
+            }
+
+            const totalPallets = orders.reduce((sum, order) => sum + order.pallets, 0);
+            const uniqueRoutes = new Set(orders.map(order => `${order.source}-${order.destination}`));
+            
+            totalPalletsSpan.textContent = totalPallets;
+            totalRoutesSpan.textContent = uniqueRoutes.size;
+            summaryDiv.style.display = 'block';
+        }
+
+        function removeOrder(index) {
+            orders.splice(index, 1);
+            updateOrdersList();
+            updateOrdersSummary();
+            
+            if (orders.length === 0) {
+                document.getElementById('consolidation-controls').style.display = 'none';
+                document.getElementById('results-section').classList.add('hidden');
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification - could be enhanced with a proper notification system
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg text-white ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Analyze consolidation button handler
+        document.getElementById('analyze-btn').addEventListener('click', async function() {
+            if (orders.length === 0) {
+                alert('Please add at least one order before analyzing consolidation options.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading-section').classList.remove('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/consolidate-orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ orders }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    displayConsolidationResults(result);
+                } else {
+                    throw new Error('Failed to analyze consolidation options');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to analyze consolidation options. Please try again.');
+            } finally {
+                document.getElementById('loading-section').classList.add('hidden');
+            }
+        });
+
+        function displayConsolidationResults(result) {
+            // Update summary
+            const summaryDiv = document.getElementById('consolidation-summary');
+            summaryDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                    <div>
+                        <div class="text-2xl font-bold text-blue-600">${result.totalOrders}</div>
+                        <div class="text-sm text-gray-600">Total Orders</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-green-600">${result.summary.totalPallets}</div>
+                        <div class="text-sm text-gray-600">Total Pallets</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-purple-600">${result.scenarios.length}</div>
+                        <div class="text-sm text-gray-600">Scenarios</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-orange-600">${result.summary.bestScenario}</div>
+                        <div class="text-sm text-gray-600">Best Option</div>
+                    </div>
+                </div>
+            `;
+
+            // Display scenarios
+            const scenariosDiv = document.getElementById('consolidation-scenarios');
+            scenariosDiv.innerHTML = result.scenarios.map((scenario, index) => 
+                createScenarioCard(scenario, index)
+            ).join('');
+
+            // Show results
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+
+            // Re-initialize lucide icons
+            lucide.createIcons();
+        }
+
+        function createScenarioCard(scenario, index) {
+            const isRecommended = index === 0; // First scenario is highest scored
+            const colorClass = scenario.type === 'immediate' ? 'border-orange-500 bg-orange-50' : 
+                              scenario.type === 'consolidation' ? 'border-green-500 bg-green-50' : 
+                              'border-purple-500 bg-purple-50';
+            
+            return `
+                <div class="bg-white rounded-xl shadow-lg border-2 ${colorClass} p-6">
+                    ${isRecommended ? '<div class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full mb-4 inline-block">🏆 Recommended</div>' : ''}
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">${scenario.name}</h3>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-blue-600">Score: ${scenario.score}</div>
+                            <div class="text-sm text-gray-600">Optimization Score</div>
+                        </div>
+                    </div>
+
+                    <p class="text-gray-600 mb-6">${scenario.description}</p>
+
+                    <!-- Key Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="text-center bg-white rounded-lg p-3">
+                            <div class="text-xl font-bold text-green-600">$${scenario.estimatedCost?.toLocaleString() || 'TBD'}</div>
+                            <div class="text-sm text-gray-600">Total Cost</div>
+                        </div>
+                        <div class="text-center bg-white rounded-lg p-3">
+                            <div class="text-xl font-bold text-blue-600">${scenario.estimatedTime || 'TBD'}h</div>
+                            <div class="text-sm text-gray-600">Transit Time</div>
+                        </div>
+                        <div class="text-center bg-white rounded-lg p-3">
+                            <div class="text-xl font-bold text-purple-600">${scenario.utilization || 0}%</div>
+                            <div class="text-sm text-gray-600">Utilization</div>
+                        </div>
+                        <div class="text-center bg-white rounded-lg p-3">
+                            <div class="text-xl font-bold text-orange-600">${scenario.waitTime || 0} days</div>
+                            <div class="text-sm text-gray-600">Wait Time</div>
+                        </div>
+                    </div>
+
+                    <!-- Truck Configuration -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-gray-900 mb-3">Truck Configuration</h4>
+                        <div class="space-y-2">
+                            ${scenario.truckConfiguration?.map(truck => `
+                                <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
+                                    <div class="flex items-center space-x-3">
+                                        <i data-lucide="truck" class="h-5 w-5 text-gray-600"></i>
+                                        <span class="font-medium">${getTruckTypeName(truck.type)}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-medium">${truck.pallets} pallets</div>
+                                        <div class="text-sm text-gray-600">${Math.round((truck.pallets/truck.capacity)*100)}% capacity</div>
+                                    </div>
+                                </div>
+                            `).join('') || '<p class="text-gray-500 text-center py-4">Truck configuration pending</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Truck Companies -->
+                    ${scenario.truckCompanies?.length > 0 ? `
+                        <div class="mb-6">
+                            <h4 class="font-semibold text-gray-900 mb-3">Recommended Truck Companies</h4>
+                            <div class="space-y-3">
+                                ${scenario.truckCompanies.slice(0, 3).map(company => `
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div class="font-semibold text-gray-900">${company.companyName}</div>
+                                                <div class="text-sm text-gray-600">${company.contact.phone}</div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-semibold text-green-600">$${company.estimatedCost?.toLocaleString() || 'Quote'}</div>
+                                                <div class="text-sm text-gray-600">${company.estimatedTime || 'TBD'}h</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mb-2">${company.recommendation}</div>
+                                        <div class="flex items-center space-x-2 text-xs">
+                                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">Reliability: ${company.reliability}/10</span>
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded">Cost: ${company.costRating}/10</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Analysis -->
+                    ${scenario.analysis ? `
+                        <div class="mb-6">
+                            <h4 class="font-semibold text-gray-900 mb-3">Analysis</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${scenario.analysis.pros?.length > 0 ? `
+                                    <div>
+                                        <h5 class="font-medium text-green-700 mb-2 flex items-center">
+                                            <i data-lucide="check-circle" class="h-4 w-4 mr-1"></i>
+                                            Advantages
+                                        </h5>
+                                        <ul class="text-sm text-gray-600 space-y-1">
+                                            ${scenario.analysis.pros.map(pro => `<li>• ${pro}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${scenario.analysis.cons?.length > 0 ? `
+                                    <div>
+                                        <h5 class="font-medium text-red-700 mb-2 flex items-center">
+                                            <i data-lucide="alert-circle" class="h-4 w-4 mr-1"></i>
+                                            Considerations
+                                        </h5>
+                                        <ul class="text-sm text-gray-600 space-y-1">
+                                            ${scenario.analysis.cons.map(con => `<li>• ${con}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Action Button -->
+                    <div class="text-center">
+                        <button onclick="selectScenario('${scenario.id}')" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
+                            Select This Scenario
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTruckTypeName(truckType) {
+            const names = {
+                'MR': 'Medium Rigid',
+                'SEMI': 'Semi-Trailer (40ft)',
+                'B_DOUBLE': 'B-Double'
+            };
+            return names[truckType] || truckType;
+        }
+
+        function selectScenario(scenarioId) {
+            alert(`Scenario "${scenarioId}" selected! This would normally proceed to booking confirmation with the recommended truck companies.`);
+        }
+
+        // Clear all orders
+        document.getElementById('clear-all-btn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all orders?')) {
+                orders = [];
+                orderIdCounter = 1;
+                updateOrdersList();
+                updateOrdersSummary();
+                document.getElementById('consolidation-controls').style.display = 'none';
+                document.getElementById('results-section').classList.add('hidden');
+                showNotification('All orders cleared.', 'info');
+            }
+        });
+
+        // New batch button
+        document.getElementById('new-batch-btn').addEventListener('click', function() {
+            orders = [];
+            orderIdCounter = 1;
+            updateOrdersList();
+            updateOrdersSummary();
+            document.getElementById('consolidation-controls').style.display = 'none';
+            document.getElementById('results-section').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

@@ -7,6 +7,8 @@ const path = require('path');
 const routeOptimizer = require('./services/routeOptimizer');
 const distanceCalculator = require('./services/distanceCalculator');
 const peakHoursService = require('./services/peakHoursService');
+const consolidationService = require('./services/consolidationService');
+const truckCompanyService = require('./services/truckCompanyService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -104,6 +106,88 @@ app.post('/api/calculate-distance', async (req, res) => {
 app.get('/api/peak-hours', (req, res) => {
   const peakHours = peakHoursService.getCurrentPeakHours();
   res.json(peakHours);
+});
+
+// New multi-order consolidation endpoint
+app.post('/api/consolidate-orders', async (req, res) => {
+  try {
+    const { orders } = req.body;
+    
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+      return res.status(400).json({
+        error: 'Orders array is required and must not be empty'
+      });
+    }
+
+    // Validate each order has required fields
+    for (const order of orders) {
+      if (!order.source || !order.destination || !order.pallets) {
+        return res.status(400).json({
+          error: 'Each order must have source, destination, and pallets'
+        });
+      }
+    }
+
+    // Analyze consolidation scenarios
+    const scenarios = consolidationService.analyzeMultipleOrders(orders);
+    
+    res.json({
+      totalOrders: orders.length,
+      scenarios: scenarios.sort((a, b) => b.score - a.score), // Sort by best score
+      summary: {
+        totalPallets: orders.reduce((sum, order) => sum + parseInt(order.pallets || 0), 0),
+        routes: scenarios.length,
+        bestScenario: scenarios.find(s => s.score === Math.max(...scenarios.map(sc => sc.score)))?.name || 'None'
+      }
+    });
+  } catch (error) {
+    console.error('Consolidation analysis error:', error);
+    res.status(500).json({
+      error: 'Failed to analyze consolidation options',
+      message: error.message
+    });
+  }
+});
+
+// Get truck companies
+app.get('/api/truck-companies', (req, res) => {
+  try {
+    const companies = truckCompanyService.getAllCompanies();
+    res.json(companies);
+  } catch (error) {
+    console.error('Truck companies error:', error);
+    res.status(500).json({
+      error: 'Failed to get truck companies',
+      message: error.message
+    });
+  }
+});
+
+// Get truck company recommendations
+app.post('/api/truck-companies/recommend', (req, res) => {
+  try {
+    const criteria = req.body;
+    const recommendations = truckCompanyService.recommendCompanies(criteria);
+    res.json(recommendations);
+  } catch (error) {
+    console.error('Truck company recommendations error:', error);
+    res.status(500).json({
+      error: 'Failed to get truck company recommendations',
+      message: error.message
+    });
+  }
+});
+
+// Get pallet size options
+app.get('/api/pallet-sizes', (req, res) => {
+  const palletSizes = {
+    standard: { label: 'Standard (1200×1200×1200mm)', weight: '1000kg', volume: '1.728m³' },
+    euro: { label: 'Euro (1200×800×1200mm)', weight: '800kg', volume: '1.152m³' },
+    half: { label: 'Half (600×1200×1200mm)', weight: '500kg', volume: '0.864m³' },
+    quarter: { label: 'Quarter (600×800×1200mm)', weight: '300kg', volume: '0.576m³' },
+    oversized: { label: 'Oversized (1200×1200×1800mm)', weight: '1500kg', volume: '2.592m³' }
+  };
+  res.json(palletSizes);
 });
 
 // Health check endpoint
