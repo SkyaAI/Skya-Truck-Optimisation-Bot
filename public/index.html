@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skya Truck Optimisation Bot - Smart Freight Planning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <i data-lucide="truck" class="h-8 w-8 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Skya Truck Optimisation Bot</h1>
+                    <p class="text-sm text-gray-600">Smart freight consolidation and route planning</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Section -->
+        <div id="welcome-section" class="text-center mb-12 fade-in">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4">Optimize Your Freight Routes</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+                Get AI-powered recommendations for cost-effective, time-efficient, and hybrid freight solutions across Australia.
+                Our advanced algorithms consider peak traffic hours, truck types, and optimal pallet consolidation.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="bg-green-100 p-3 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="dollar-sign" class="h-6 w-6 text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Cost Effective</h3>
+                    <p class="text-gray-600 text-sm">Maximize load efficiency with B-Double and Semi-Trailer optimization</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="bg-orange-100 p-3 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="clock" class="h-6 w-6 text-orange-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Time Efficient</h3>
+                    <p class="text-gray-600 text-sm">Fast delivery with peak hours avoidance and flexible scheduling</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <div class="bg-purple-100 p-3 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="zap" class="h-6 w-6 text-purple-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Hybrid Solution</h3>
+                    <p class="text-gray-600 text-sm">Balanced approach optimizing both cost and delivery time</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Form -->
+        <div id="order-form" class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto mb-8">
+            <h3 class="text-2xl font-bold text-gray-900 mb-6">Create Freight Order</h3>
+            <form id="freight-form" class="space-y-8">
+                <!-- Route Information -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Source Location *</label>
+                        <select id="source" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select pickup location</option>
+                            <option value="Sydney, NSW">Sydney, NSW</option>
+                            <option value="Melbourne, VIC">Melbourne, VIC</option>
+                            <option value="Brisbane, QLD">Brisbane, QLD</option>
+                            <option value="Perth, WA">Perth, WA</option>
+                            <option value="Adelaide, SA">Adelaide, SA</option>
+                            <option value="Gold Coast, QLD">Gold Coast, QLD</option>
+                            <option value="Newcastle, NSW">Newcastle, NSW</option>
+                            <option value="Canberra, ACT">Canberra, ACT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Destination *</label>
+                        <select id="destination" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select delivery location</option>
+                            <option value="Sydney, NSW">Sydney, NSW</option>
+                            <option value="Melbourne, VIC">Melbourne, VIC</option>
+                            <option value="Brisbane, QLD">Brisbane, QLD</option>
+                            <option value="Perth, WA">Perth, WA</option>
+                            <option value="Adelaide, SA">Adelaide, SA</option>
+                            <option value="Gold Coast, QLD">Gold Coast, QLD</option>
+                            <option value="Newcastle, NSW">Newcastle, NSW</option>
+                            <option value="Canberra, ACT">Canberra, ACT</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Number of Pallets *</label>
+                        <input type="number" id="palletCount" required min="1" max="100" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="Enter number of pallets">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Urgency Level</label>
+                        <select id="urgency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="standard">Standard (2-3 days)</option>
+                            <option value="express">Express (1-2 days)</option>
+                            <option value="urgent">Urgent (Same day/Next day)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Date *</label>
+                        <input type="date" id="pickupDate" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Date *</label>
+                        <input type="date" id="deliveryDate" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <button type="submit" id="optimize-btn" 
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+                    Find Optimal Routes
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading Section -->
+        <div id="loading-section" class="hidden bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto mb-8">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4">
+                    <i data-lucide="loader-2" class="h-12 w-12 text-blue-600"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Optimizing Routes</h3>
+                <p class="text-gray-600">Analyzing thousands of route combinations for optimal results...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden">
+            <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">Route Recommendations</h3>
+            <div id="route-options" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Route options will be populated here -->
+            </div>
+            <div class="text-center">
+                <button id="new-order-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg">
+                    Create New Order
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-sm text-gray-600">
+                © 2024 Skya Logistics. Powered by advanced route optimization algorithms.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Form handling
+        document.getElementById('freight-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                source: document.getElementById('source').value,
+                destination: document.getElementById('destination').value,
+                palletCount: document.getElementById('palletCount').value,
+                palletSize: '1200x1200x1200',
+                pickupDate: document.getElementById('pickupDate').value,
+                deliveryDate: document.getElementById('deliveryDate').value,
+                urgency: document.getElementById('urgency').value
+            };
+
+            // Validate required fields
+            if (!formData.source || !formData.destination || !formData.palletCount || 
+                !formData.pickupDate || !formData.deliveryDate) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            if (formData.source === formData.destination) {
+                alert('Source and destination must be different.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('order-form').style.display = 'none';
+            document.getElementById('loading-section').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/optimize-route', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                });
+
+                if (response.ok) {
+                    const routes = await response.json();
+                    displayRoutes(routes, formData);
+                } else {
+                    throw new Error('Failed to optimize routes');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to optimize routes. Please try again.');
+                document.getElementById('order-form').style.display = 'block';
+            } finally {
+                document.getElementById('loading-section').classList.add('hidden');
+            }
+        });
+
+        function displayRoutes(routes, orderData) {
+            const routeOptions = document.getElementById('route-options');
+            routeOptions.innerHTML = '';
+
+            routes.forEach((route, index) => {
+                const routeCard = createRouteCard(route, orderData);
+                routeOptions.appendChild(routeCard);
+            });
+
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function createRouteCard(route, orderData) {
+            const div = document.createElement('div');
+            const colorClass = route.type === 'Cost Effective' ? 'border-green-500' : 
+                              route.type === 'Time Effective' ? 'border-orange-500' : 'border-purple-500';
+            const bgColorClass = route.type === 'Cost Effective' ? 'bg-green-50' : 
+                                route.type === 'Time Effective' ? 'bg-orange-50' : 'bg-purple-50';
+            
+            div.className = `bg-white rounded-xl shadow-lg border-2 ${colorClass} p-6 hover:shadow-xl transition-shadow duration-200 ${bgColorClass}`;
+            
+            const iconName = route.type === 'Cost Effective' ? 'dollar-sign' : 
+                           route.type === 'Time Effective' ? 'clock' : 'zap';
+            
+            div.innerHTML = `
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="p-2 rounded-lg ${route.type === 'Cost Effective' ? 'bg-green-100' : 
+                                                   route.type === 'Time Effective' ? 'bg-orange-100' : 'bg-purple-100'}">
+                        <i data-lucide="${iconName}" class="h-6 w-6 ${route.type === 'Cost Effective' ? 'text-green-600' : 
+                                                                     route.type === 'Time Effective' ? 'text-orange-600' : 'text-purple-600'}"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-900">${route.type}</h4>
+                        ${route.recommended ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Recommended</span>' : ''}
+                    </div>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-4">${route.description}</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold ${route.type === 'Cost Effective' ? 'text-green-600' : 
+                                                         route.type === 'Time Effective' ? 'text-orange-600' : 'text-purple-600'}">
+                            $${route.totalCost.toLocaleString()}
+                        </div>
+                        <div class="text-sm text-gray-600">Total Cost</div>
+                        ${route.savings ? `<div class="text-xs text-green-600 mt-1">Save $${route.savings}</div>` : ''}
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold ${route.type === 'Cost Effective' ? 'text-green-600' : 
+                                                         route.type === 'Time Effective' ? 'text-orange-600' : 'text-purple-600'}">
+                            ${route.totalTime}h
+                        </div>
+                        <div class="text-sm text-gray-600">Transit Time</div>
+                        ${route.timeReduction ? `<div class="text-xs text-blue-600 mt-1">${route.timeReduction}h faster</div>` : ''}
+                    </div>
+                </div>
+                
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-center space-x-2 text-sm text-gray-700">
+                        <i data-lucide="map-pin" class="h-4 w-4"></i>
+                        <span>${route.distance} km</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-700">
+                        <i data-lucide="fuel" class="h-4 w-4"></i>
+                        <span>$${route.fuelCost} fuel cost</span>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-700">
+                        <i data-lucide="truck" class="h-4 w-4"></i>
+                        <span>${route.trucks.length} truck${route.trucks.length > 1 ? 's' : ''} required</span>
+                    </div>
+                </div>
+                
+                ${route.trucks.map(truck => `
+                    <div class="bg-gray-50 rounded-lg p-3 mb-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium">${truck.type}</span>
+                            <span class="text-sm text-gray-600">${truck.pallets} pallets ($${truck.cost})</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div class="h-2 rounded-full ${route.type === 'Cost Effective' ? 'bg-green-500' : 
+                                                           route.type === 'Time Effective' ? 'bg-orange-500' : 'bg-purple-500'}" 
+                                 style="width: ${truck.utilization}%"></div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1">${truck.utilization}% utilization</div>
+                    </div>
+                `).join('')}
+                
+                <button onclick="selectRoute('${route.type}')" 
+                        class="w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 
+                               ${route.type === 'Cost Effective' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 
+                                 route.type === 'Time Effective' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 
+                                                                   'bg-purple-100 text-purple-700 hover:bg-purple-200'}">
+                    Select This Route
+                </button>
+            `;
+            
+            return div;
+        }
+
+        function selectRoute(routeType) {
+            alert(`${routeType} route selected! This would normally proceed to booking confirmation.`);
+        }
+
+        // New order button
+        document.getElementById('new-order-btn').addEventListener('click', function() {
+            document.getElementById('results-section').classList.add('hidden');
+            document.getElementById('order-form').style.display = 'block';
+            document.getElementById('freight-form').reset();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Set minimum date to tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateString = tomorrow.toISOString().split('T')[0];
+        document.getElementById('pickupDate').min = dateString;
+        document.getElementById('deliveryDate').min = dateString;
+
+        // Update delivery date when pickup date changes
+        document.getElementById('pickupDate').addEventListener('change', function() {
+            const pickupDate = new Date(this.value);
+            const minDeliveryDate = new Date(pickupDate);
+            minDeliveryDate.setDate(minDeliveryDate.getDate() + 1);
+            document.getElementById('deliveryDate').min = minDeliveryDate.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>

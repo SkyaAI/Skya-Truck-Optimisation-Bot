@@ -18,8 +18,8 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, '../client/build')));
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
 app.post('/api/optimize-route', async (req, res) => {
@@ -104,9 +104,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Catch all handler: send back React's index.html file for client-side routing
+// Catch all handler: send back the main index.html file
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build/index.html'));
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Error handling middleware
