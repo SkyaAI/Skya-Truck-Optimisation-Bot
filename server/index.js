@@ -13,7 +13,7 @@ const truckCompanyService = require('./services/truckCompanyService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware - Configure helmet with relaxed CSP for external resources
+// Middleware - Configure helmet with relaxed CSP for external resources and navigation
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -23,6 +23,9 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https:"],
+      formAction: ["'self'", "https:"], // Allow form submissions to external sites
+      navigateTo: ["https:"], // Allow navigation to external https sites
+      childSrc: ["'self'", "https:"], // Allow opening external windows
     },
   },
 }));

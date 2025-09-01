@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Skya Truck Bot - User Test Guide</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .test-box { background: #f0f8ff; border: 1px solid #0066cc; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .issue-box { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .success-box { background: #d1edff; border: 1px solid #0d6efd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; }
+        .step { background: white; padding: 10px; margin: 5px 0; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Skya Truck Bot - User Testing Guide</h1>
+    
+    <div class="test-box">
+        <h2>🎯 Testing Your Exact Scenario: 15+7+18 = 40 Pallets</h2>
+        <p><strong>Expected Results:</strong></p>
+        <ul>
+            <li>✅ Multiple solutions showing <strong>ALL 40 pallets</strong> consolidated</li>
+            <li>✅ "Select" buttons that redirect to truck company booking websites</li>
+            <li>✅ Different truck configurations (2x SEMI trucks, B-Double options, etc.)</li>
+        </ul>
+    </div>
+
+    <h2>📋 Step-by-Step Test Instructions</h2>
+
+    <div class="step">
+        <h3>Step 1: Access the Application</h3>
+        <p>🌐 <strong>URL:</strong> <a href="https://5000-i6k13rhxnugcxytsjfxtt-6532622b.e2b.dev" target="_blank">https://5000-i6k13rhxnugcxytsjfxtt-6532622b.e2b.dev</a></p>
+        <p><strong>Important:</strong> Press <code>Ctrl+F5</code> or <code>Cmd+Shift+R</code> to force refresh and clear cache!</p>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Add Your Three Orders</h3>
+        
+        <div class="success-box">
+            <h4>Order 1: 15 Pallets</h4>
+            <ul>
+                <li><strong>Pickup Location:</strong> Melbourne</li>
+                <li><strong>Delivery Location:</strong> Sydney</li>
+                <li><strong>Pallets:</strong> 15</li>
+                <li><strong>Pallet Size:</strong> Standard</li>
+                <li><strong>Stock Available Date:</strong> 2024-09-01 (today)</li>
+                <li><strong>Must Arrive By:</strong> 2024-09-05</li>
+            </ul>
+        </div>
+        
+        <div class="success-box">
+            <h4>Order 2: 7 Pallets</h4>
+            <ul>
+                <li><strong>Pickup Location:</strong> Melbourne</li>
+                <li><strong>Delivery Location:</strong> Sydney</li>
+                <li><strong>Pallets:</strong> 7</li>
+                <li><strong>Pallet Size:</strong> Standard</li>
+                <li><strong>Stock Available Date:</strong> 2024-09-01 (today)</li>
+                <li><strong>Must Arrive By:</strong> 2024-09-05</li>
+            </ul>
+        </div>
+        
+        <div class="success-box">
+            <h4>Order 3: 18 Pallets</h4>
+            <ul>
+                <li><strong>Pickup Location:</strong> Melbourne</li>
+                <li><strong>Delivery Location:</strong> Sydney</li>
+                <li><strong>Pallets:</strong> 18</li>
+                <li><strong>Pallet Size:</strong> Standard</li>
+                <li><strong>Stock Available Date:</strong> 2024-09-01 (today)</li>
+                <li><strong>Must Arrive By:</strong> 2024-09-05</li>
+            </ul>
+        </div>
+        
+        <p><em>Note: All orders have the same route and timeline for optimal consolidation testing</em></p>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Click "Get Consolidation Options"</h3>
+        <p>After adding all 3 orders, click the blue button to analyze consolidation.</p>
+    </div>
+
+    <div class="step">
+        <h3>Step 4: Verify Results</h3>
+        
+        <div class="test-box">
+            <h4>✅ What You SHOULD See:</h4>
+            <ul>
+                <li><strong>Total Pallets:</strong> 40 (in the summary section)</li>
+                <li><strong>Scenarios:</strong> Multiple options showing <strong>"40 Pallets"</strong> in titles</li>
+                <li><strong>Truck Configuration:</strong> 
+                    <ul>
+                        <li>2x Semi-Trailer (20+20 pallets) with ~91% utilization</li>
+                        <li>Or other combinations that handle all 40 pallets</li>
+                    </ul>
+                </li>
+                <li><strong>Truck Companies:</strong> Each scenario shows 3+ recommended companies</li>
+                <li><strong>Booking Buttons:</strong> 
+                    <ul>
+                        <li>Blue "🚚 Select This Scenario & Book Trucks" button</li>
+                        <li>Green "🌐 Book [Company Name] Online" button</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="issue-box">
+            <h4>❌ Problems to Report:</h4>
+            <ul>
+                <li><strong>Partial Consolidation:</strong> If you see scenarios with only 15 or 22 pallets instead of all 40</li>
+                <li><strong>Broken Booking:</strong> If clicking "Select" doesn't open truck company websites</li>
+                <li><strong>No Scenarios:</strong> If you get error messages or no results</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>Step 5: Test Booking Functionality</h3>
+        
+        <div class="test-box">
+            <h4>Testing the Select Button:</h4>
+            <ol>
+                <li>Click the blue <strong>"🚚 Select This Scenario & Book Trucks"</strong> button on any scenario</li>
+                <li>You should see a confirmation dialog with scenario details</li>
+                <li>Click "OK" to proceed</li>
+                <li><strong>Expected:</strong> A new tab opens with the truck company's booking website</li>
+                <li><strong>Expected:</strong> Green success notification appears</li>
+            </ol>
+        </div>
+
+        <div class="test-box">
+            <h4>Testing the Direct Book Button:</h4>
+            <ol>
+                <li>Click the green <strong>"🌐 Book [Company] Online"</strong> button</li>
+                <li><strong>Expected:</strong> Immediately opens company booking website in new tab</li>
+                <li><strong>Expected:</strong> Green notification with booking reference</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3>Step 6: Open Developer Console (For Debugging)</h3>
+        <p><strong>Press F12</strong> and click the <strong>"Console"</strong> tab to see debug messages:</p>
+        
+        <div class="success-box">
+            <h4>✅ Good Console Messages:</h4>
+            <pre>
+🔧 selectScenario called with ID: deadline-0-Melbourne-Sydney
+✅ Found scenario: Deadline Compliance - Dispatch 40 Pallets
+🚛 Truck companies available: 3
+🏆 Top company: Centurion
+🔗 Booking URL: https://www.centurion.com.au/quote-request
+✅ Valid booking URL found, showing confirmation...
+🚀 User confirmed, opening URL: https://www.centurion.com.au/quote-request
+✅ Successfully opened new window
+            </pre>
+        </div>
+
+        <div class="issue-box">
+            <h4>❌ Problem Console Messages:</h4>
+            <pre>
+❌ Scenario not found for ID: [some-id]
+❌ No booking URL provided
+❌ Failed to open new window (popup blocked?)
+❌ Error opening booking URL: [error details]
+            </pre>
+        </div>
+    </div>
+
+    <h2>🔧 Troubleshooting Steps</h2>
+
+    <div class="issue-box">
+        <h3>If You See Partial Solutions (not all 40 pallets):</h3>
+        <ol>
+            <li><strong>Hard Refresh:</strong> Press <code>Ctrl+F5</code> (Windows) or <code>Cmd+Shift+R</code> (Mac)</li>
+            <li><strong>Check Input:</strong> Ensure all 3 orders have the same pickup/delivery locations</li>
+            <li><strong>Check Dates:</strong> Ensure all orders have the same dates</li>
+            <li><strong>Clear Cache:</strong> Clear browser cache and cookies</li>
+        </ol>
+    </div>
+
+    <div class="issue-box">
+        <h3>If Booking Buttons Don't Work:</h3>
+        <ol>
+            <li><strong>Allow Popups:</strong> Enable popups for this website in browser settings</li>
+            <li><strong>Check Console:</strong> Open F12 Developer Console for error messages</li>
+            <li><strong>Try Direct Book:</strong> Use the green "Book [Company] Online" button instead</li>
+            <li><strong>Manual Copy:</strong> Copy the booking URL from console messages</li>
+        </ol>
+    </div>
+
+    <h2>📊 Expected Optimal Solutions</h2>
+
+    <div class="success-box">
+        <h3>Scenario 1: Full Consolidation</h3>
+        <ul>
+            <li><strong>Configuration:</strong> 2x Semi-Trailer trucks (20+20 pallets)</li>
+            <li><strong>Utilization:</strong> ~91% (excellent efficiency)</li>
+            <li><strong>Cost:</strong> ~$5,760 total</li>
+            <li><strong>Benefits:</strong> Lowest cost, high efficiency</li>
+        </ul>
+    </div>
+
+    <div class="success-box">
+        <h3>Alternative: B-Double + Small Truck</h3>
+        <ul>
+            <li><strong>Configuration:</strong> 1x B-Double (36 pallets) + 1x Medium Rigid (4 pallets)</li>
+            <li><strong>Utilization:</strong> ~83% overall</li>
+            <li><strong>Benefits:</strong> Good for long-distance routes</li>
+        </ul>
+    </div>
+
+    <div class="test-box">
+        <p><strong>🎯 Key Success Metrics:</strong></p>
+        <ul>
+            <li>✅ Shows solutions for ALL 40 pallets (not partial)</li>
+            <li>✅ Multiple truck configuration options</li>
+            <li>✅ 60%+ utilization (meets efficiency goal)</li>
+            <li>✅ Working booking redirects to real truck companies</li>
+            <li>✅ AI recommendations with cost analysis</li>
+        </ul>
+    </div>
+
+    <hr>
+    <p><em>Last updated: Enhanced with debugging v2.0 | If you encounter issues, check the browser console (F12) for detailed debug messages.</em></p>
+</body>
+</html>

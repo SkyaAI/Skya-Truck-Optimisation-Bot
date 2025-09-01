@@ -6,6 +6,8 @@
     <title>Skya Truck Optimization Bot - Australian Freight Consolidation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- Debug version 2.0 - Enhanced booking functionality -->
+    <meta name="cache-version" content="2.0">
     <style>
         .loading-spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -653,23 +655,57 @@
         }
 
         function selectScenario(scenarioId) {
+            console.log('🔧 selectScenario called with ID:', scenarioId);
+            
             // Find the selected scenario
             const scenario = currentScenarios.find(s => s.id === scenarioId);
-            if (!scenario) return;
+            if (!scenario) {
+                console.error('❌ Scenario not found for ID:', scenarioId);
+                alert('Error: Scenario not found. Please refresh the page and try again.');
+                return;
+            }
+
+            console.log('✅ Found scenario:', scenario.name);
+            console.log('📋 Scenario data:', scenario);
 
             // Check if we have truck companies and get the top recommended one
             const topCompany = scenario.truckCompanies?.[0];
             
+            console.log('🚛 Truck companies available:', scenario.truckCompanies?.length || 0);
+            if (topCompany) {
+                console.log('🏆 Top company:', topCompany.companyName || topCompany.name);
+                console.log('🔗 Booking URL:', topCompany.contact?.bookingUrl);
+            }
+            
             if (topCompany && topCompany.contact?.bookingUrl) {
+                console.log('✅ Valid booking URL found, showing confirmation...');
+                
                 // Show brief confirmation then redirect to booking website
-                if (confirm(`Redirecting to ${topCompany.companyName} booking page.\n\nScenario: ${scenario.name}\nEstimated Cost: $${scenario.estimatedCost?.toLocaleString() || 'TBD'}\nEstimated Time: ${scenario.estimatedTime || 'TBD'}h\n\nClick OK to proceed to their website for booking.`)) {
-                    // Open booking URL in new tab
-                    window.open(topCompany.contact.bookingUrl, '_blank');
+                const confirmMessage = `Redirecting to ${topCompany.companyName} booking page.\n\nScenario: ${scenario.name}\nTotal Pallets: ${scenario.totalPalletsOnDate || 'N/A'}\nEstimated Cost: $${scenario.estimatedCost?.toLocaleString() || 'TBD'}\nEstimated Time: ${scenario.estimatedTime || 'TBD'}h\nUtilization: ${scenario.utilization || 'N/A'}%\n\nClick OK to proceed to their website for booking.`;
+                
+                if (confirm(confirmMessage)) {
+                    console.log('🚀 User confirmed, opening URL:', topCompany.contact.bookingUrl);
                     
-                    // Show success notification
-                    showNotification(`Redirected to ${topCompany.companyName} for booking. Use reference: ${scenarioId}`, 'success');
+                    // Try to open booking URL in new tab
+                    try {
+                        const newWindow = window.open(topCompany.contact.bookingUrl, '_blank', 'noopener,noreferrer');
+                        if (newWindow) {
+                            console.log('✅ Successfully opened new window');
+                            // Show success notification
+                            showNotification(`Redirected to ${topCompany.companyName} for booking. Reference: ${scenarioId}`, 'success');
+                        } else {
+                            console.error('❌ Failed to open new window (popup blocked?)');
+                            alert(`Popup blocked! Please allow popups for this site or manually visit:\n${topCompany.contact.bookingUrl}`);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error opening booking URL:', error);
+                        alert(`Error opening booking page. Please manually visit:\n${topCompany.contact.bookingUrl}`);
+                    }
+                } else {
+                    console.log('ℹ️ User cancelled booking redirect');
                 }
             } else {
+                console.log('⚠️ No booking URL available, showing fallback modal');
                 // Fallback to original modal if no booking URL available
                 const bookingDetails = {
                     scenarioId: scenarioId,
@@ -839,13 +875,18 @@
         }
 
         function directBookWebsite(companyCode, bookingUrl, companyName) {
+            console.log('🌐 directBookWebsite called:', { companyCode, bookingUrl, companyName });
+            
             // Create booking reference
             const bookingRef = `SKYA-${Date.now()}-${companyCode}`;
             
-            if (!bookingUrl) {
+            if (!bookingUrl || bookingUrl === '') {
+                console.error('❌ No booking URL provided');
                 alert(`Booking URL not available for ${companyName}. Please contact them directly.`);
                 return;
             }
+            
+            console.log('🚀 Opening booking URL:', bookingUrl);
             
             // Prepare comprehensive booking data for auto-filling forms
             const totalPallets = orders.reduce((sum, order) => sum + order.pallets, 0);
@@ -876,10 +917,20 @@
                 localStorage.setItem('lastBookingCompany', companyName);
                 
                 // Open booking URL in new tab
-                window.open(bookingUrl, '_blank');
-                
-                // Show success notification with booking reference
-                showNotification(`Redirected to ${companyName}. Reference: ${bookingRef}`, 'success');
+                try {
+                    const newWindow = window.open(bookingUrl, '_blank', 'noopener,noreferrer');
+                    if (newWindow) {
+                        console.log('✅ Successfully opened booking window for:', companyName);
+                        // Show success notification with booking reference
+                        showNotification(`Redirected to ${companyName}. Reference: ${bookingRef}`, 'success');
+                    } else {
+                        console.error('❌ Failed to open booking window (popup blocked?)');
+                        alert(`Popup blocked! Please allow popups for this site or manually visit:\n${bookingUrl}`);
+                    }
+                } catch (error) {
+                    console.error('❌ Error opening booking URL:', error);
+                    alert(`Error opening booking page. Please manually visit:\n${bookingUrl}`);
+                }
             }
         }
 
