@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Form Test</title>
+    <script>
+        window.onload = function() {
+            // Simulate filling out the form
+            console.log('Testing form submission...');
+            
+            // Fill required fields
+            document.getElementById('customerName').value = 'Test Customer';
+            document.getElementById('customerContact').value = '0412345678';
+            document.getElementById('pickupContact').value = 'John Doe (02)98765432';
+            document.getElementById('pickupAddress').value = '123 Test St, Sydney NSW 2000';
+            document.getElementById('deliveryAddress').value = '456 Demo Ave, Melbourne VIC 3000';
+            document.getElementById('palletCount').value = '2';
+            
+            // Set dates
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            
+            document.getElementById('pickupDate').value = tomorrow.toISOString().split('T')[0];
+            document.getElementById('deliveryDate').value = nextWeek.toISOString().split('T')[0];
+            
+            console.log('Form filled, attempting to submit...');
+            
+            // Try to submit the form
+            try {
+                document.getElementById('order-form').dispatchEvent(new Event('submit'));
+                console.log('Form submitted successfully');
+            } catch (error) {
+                console.error('Form submission error:', error);
+            }
+        };
+    </script>
+</head>
+<body>
+    <iframe src="https://5000-i6k13rhxnugcxytsjfxtt-6532622b.e2b.dev/" width="100%" height="600px" onload="setTimeout(() => window.onload(), 2000)"></iframe>
+</body>
+</html>
