@@ -159,6 +159,7 @@ class ConsolidationService {
     // Generate multiple dispatch strategies
     scenarios.push(...this.createDeadlineOptimizedScenarios(group));
     scenarios.push(...this.createConsolidationScenarios(group));
+    scenarios.push(...this.createAlternativeTruckConfigurations(group));
     
     // Sort by total cost (truck cost + penalty cost)
     return scenarios.sort((a, b) => a.totalCostWithPenalties - b.totalCostWithPenalties);
@@ -698,6 +699,259 @@ class ConsolidationService {
     
     // On-time bonus
     if (delayDays === 0) score += 20;
+    
+    return Math.max(0, score);
+  }
+
+  // Create alternative truck configuration scenarios to show different options
+  createAlternativeTruckConfigurations(group) {
+    const scenarios = [];
+    const today = moment();
+    const transitTime = 2;
+    const totalPallets = group.totalStandardPallets;
+    
+    // Only create alternatives if we have a reasonable number of pallets
+    if (totalPallets < 15 || totalPallets > 50) return scenarios;
+    
+    const dispatchDate = moment.max(group.earliestPickup, today);
+    const penaltyCost = this.calculatePenaltyCost(group.orders, dispatchDate, transitTime);
+    const delayDays = this.calculateDelayDays(group.orders, dispatchDate, transitTime);
+    
+    // Alternative 1: Maximum efficiency (B-Double if viable)
+    if (totalPallets >= 25) {
+      const bDoubleScenario = this.createBDoubleScenario(group, dispatchDate, penaltyCost, delayDays);
+      if (bDoubleScenario) scenarios.push(bDoubleScenario);
+    }
+    
+    // Alternative 2: Speed optimized (Multiple smaller trucks)
+    if (totalPallets >= 20) {
+      const speedScenario = this.createSpeedOptimizedScenario(group, dispatchDate, penaltyCost, delayDays);
+      if (speedScenario) scenarios.push(speedScenario);
+    }
+    
+    // Alternative 3: Cost optimized (Mix of truck sizes)
+    const mixedScenario = this.createMixedTruckScenario(group, dispatchDate, penaltyCost, delayDays);
+    if (mixedScenario) scenarios.push(mixedScenario);
+    
+    return scenarios;
+  }
+
+  createBDoubleScenario(group, dispatchDate, penaltyCost, delayDays) {
+    const totalPallets = group.totalStandardPallets;
+    
+    // Calculate B-Double configuration
+    const bDoubleCapacity = 36;
+    const bDoublesNeeded = Math.ceil(totalPallets / bDoubleCapacity);
+    
+    if (bDoublesNeeded > 2) return null; // Not practical for very large loads
+    
+    const truckConfiguration = [];
+    let remainingPallets = totalPallets;
+    
+    for (let i = 0; i < bDoublesNeeded; i++) {
+      const pallets = Math.min(remainingPallets, bDoubleCapacity);
+      truckConfiguration.push({
+        type: 'B_DOUBLE',
+        pallets,
+        capacity: bDoubleCapacity,
+        utilization: Math.round((pallets / bDoubleCapacity) * 100)
+      });
+      remainingPallets -= pallets;
+    }
+    
+    const avgUtilization = Math.round((totalPallets / (bDoublesNeeded * bDoubleCapacity)) * 100);
+    const estimatedCost = bDoublesNeeded * 3600; // B-Double cost estimation
+    const totalCostWithPenalties = estimatedCost + penaltyCost;
+    
+    return {
+      id: `b-double-${group.routeKey}`,
+      type: 'efficiency-optimized',
+      name: `Maximum Efficiency - ${totalPallets} Pallets (B-Double)`,
+      description: `${bDoublesNeeded}x B-Double truck${bDoublesNeeded !== 1 ? 's' : ''} for maximum highway efficiency`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchDate: dispatchDate.format('YYYY-MM-DD'),
+      waitTime: Math.max(0, dispatchDate.diff(moment(), 'days')),
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration,
+      utilization: avgUtilization,
+      estimatedCost,
+      penaltyCost,
+      totalCostWithPenalties,
+      estimatedTime: 16 + (bDoublesNeeded * 2), // B-Doubles are faster on highways
+      isOnTime: delayDays === 0,
+      delayDays,
+      recommendations: [
+        avgUtilization >= 70 ? `✅ Good ${avgUtilization}% B-Double utilization` : `⚠️ Low ${avgUtilization}% B-Double utilization`,
+        `🚚 Truck cost: $${estimatedCost.toFixed(2)}`,
+        penaltyCost > 0 ? `⚠️ Late penalty: $${penaltyCost.toFixed(2)}` : `✅ No delivery penalties`,
+        `🛣️ Optimized for long-distance highway transport`,
+        `⏱️ Faster highway transit with fewer loading points`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [],
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'efficiency')
+    };
+  }
+
+  createSpeedOptimizedScenario(group, dispatchDate, penaltyCost, delayDays) {
+    const totalPallets = group.totalStandardPallets;
+    
+    // Use multiple smaller trucks for faster loading/unloading
+    const mrCapacity = 10;
+    const mrTrucksNeeded = Math.ceil(totalPallets / mrCapacity);
+    
+    if (mrTrucksNeeded > 6) return null; // Too many trucks becomes impractical
+    
+    const truckConfiguration = [];
+    let remainingPallets = totalPallets;
+    
+    for (let i = 0; i < mrTrucksNeeded; i++) {
+      const pallets = Math.min(remainingPallets, mrCapacity);
+      truckConfiguration.push({
+        type: 'MR',
+        pallets,
+        capacity: mrCapacity,
+        utilization: Math.round((pallets / mrCapacity) * 100)
+      });
+      remainingPallets -= pallets;
+    }
+    
+    const avgUtilization = Math.round((totalPallets / (mrTrucksNeeded * mrCapacity)) * 100);
+    const estimatedCost = mrTrucksNeeded * 2080; // MR truck cost estimation
+    const totalCostWithPenalties = estimatedCost + penaltyCost;
+    
+    return {
+      id: `speed-${group.routeKey}`,
+      type: 'speed-optimized',
+      name: `Speed Optimized - ${totalPallets} Pallets (Multi-MR)`,
+      description: `${mrTrucksNeeded}x Medium Rigid trucks for fastest loading and delivery flexibility`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchDate: dispatchDate.format('YYYY-MM-DD'),
+      waitTime: Math.max(0, dispatchDate.diff(moment(), 'days')),
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration,
+      utilization: avgUtilization,
+      estimatedCost,
+      penaltyCost,
+      totalCostWithPenalties,
+      estimatedTime: 14 + (mrTrucksNeeded * 1.5), // Parallel loading reduces time
+      isOnTime: delayDays === 0,
+      delayDays,
+      recommendations: [
+        `🚀 Fastest loading: ${mrTrucksNeeded} trucks can load simultaneously`,
+        `🚚 Truck cost: $${estimatedCost.toFixed(2)}`,
+        penaltyCost > 0 ? `⚠️ Late penalty: $${penaltyCost.toFixed(2)}` : `✅ No delivery penalties`,
+        `📍 Best for multiple delivery points or tight access areas`,
+        avgUtilization >= 80 ? `✅ Good ${avgUtilization}% utilization per truck` : `⚠️ Higher cost due to multiple trucks`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [],
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'speed')
+    };
+  }
+
+  createMixedTruckScenario(group, dispatchDate, penaltyCost, delayDays) {
+    const totalPallets = group.totalStandardPallets;
+    
+    // Optimize with mixed truck sizes for best cost/efficiency balance
+    const truckConfiguration = [];
+    let remainingPallets = totalPallets;
+    
+    // Use B-Double for bulk
+    if (remainingPallets >= 30) {
+      const pallets = Math.min(remainingPallets, 36);
+      truckConfiguration.push({
+        type: 'B_DOUBLE',
+        pallets,
+        capacity: 36,
+        utilization: Math.round((pallets / 36) * 100)
+      });
+      remainingPallets -= pallets;
+    }
+    
+    // Use SEMI for medium loads
+    while (remainingPallets >= 15) {
+      const pallets = Math.min(remainingPallets, 22);
+      truckConfiguration.push({
+        type: 'SEMI',
+        pallets,
+        capacity: 22,
+        utilization: Math.round((pallets / 22) * 100)
+      });
+      remainingPallets -= pallets;
+    }
+    
+    // Use MR for remaining
+    if (remainingPallets > 0) {
+      truckConfiguration.push({
+        type: 'MR',
+        pallets: remainingPallets,
+        capacity: 10,
+        utilization: Math.round((remainingPallets / 10) * 100)
+      });
+    }
+    
+    if (truckConfiguration.length === 0) return null;
+    
+    // Calculate costs
+    const estimatedCost = truckConfiguration.reduce((total, truck) => {
+      const costs = { B_DOUBLE: 3600, SEMI: 2880, MR: 2080 };
+      return total + costs[truck.type];
+    }, 0);
+    
+    const totalCapacity = truckConfiguration.reduce((sum, t) => sum + t.capacity, 0);
+    const avgUtilization = Math.round((totalPallets / totalCapacity) * 100);
+    const totalCostWithPenalties = estimatedCost + penaltyCost;
+    
+    return {
+      id: `mixed-${group.routeKey}`,
+      type: 'cost-optimized',
+      name: `Balanced Mix - ${totalPallets} Pallets (Mixed Trucks)`,
+      description: `Optimized mix of ${truckConfiguration.length} trucks for best cost-efficiency balance`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchDate: dispatchDate.format('YYYY-MM-DD'),
+      waitTime: Math.max(0, dispatchDate.diff(moment(), 'days')),
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration,
+      utilization: avgUtilization,
+      estimatedCost,
+      penaltyCost,
+      totalCostWithPenalties,
+      estimatedTime: 18 + (truckConfiguration.length * 1.5),
+      isOnTime: delayDays === 0,
+      delayDays,
+      recommendations: [
+        `⚖️ Balanced approach: ${truckConfiguration.map(t => t.type).join(' + ')}`,
+        `🚚 Truck cost: $${estimatedCost.toFixed(2)}`,
+        penaltyCost > 0 ? `⚠️ Late penalty: $${penaltyCost.toFixed(2)}` : `✅ No delivery penalties`,
+        `📊 Overall ${avgUtilization}% utilization`,
+        `💰 Optimized for cost-efficiency balance`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [],
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'balanced')
+    };
+  }
+
+  calculateAlternativeScore(totalCost, utilization, delayDays, type) {
+    let score = 100;
+    
+    // Cost efficiency
+    score -= totalCost / 200;
+    
+    // Utilization bonus
+    score += utilization / 3;
+    
+    // Delay penalty
+    score -= delayDays * 30;
+    
+    // Type-specific bonuses
+    if (type === 'efficiency' && utilization >= 70) score += 15;
+    if (type === 'speed' && delayDays === 0) score += 20;
+    if (type === 'balanced') score += 10;
     
     return Math.max(0, score);
   }
