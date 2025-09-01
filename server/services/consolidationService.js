@@ -1,6 +1,7 @@
 const moment = require('moment');
 const routeOptimizer = require('./routeOptimizer');
 const truckCompanyService = require('./truckCompanyService');
+const palletOptimizationService = require('./palletOptimizationService');
 
 // Pallet size definitions with volume calculations
 const PALLET_SIZES = {
@@ -194,22 +195,25 @@ class ConsolidationService {
   }
 
   createImmediateScenario(group) {
-    const truckConfig = this.optimizeTruckConfiguration(group.totalStandardPallets, 'immediate');
+    // Use enhanced pallet optimization
+    const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+    const truckConfig = palletRecommendation.allOptions?.[0]?.trucks || this.optimizeTruckConfiguration(group.totalStandardPallets, 'immediate');
     
     return {
       id: `immediate-${group.routeKey}`,
       type: 'immediate',
       name: 'Immediate Dispatch',
-      description: 'Dispatch all orders immediately without waiting',
+      description: 'Dispatch all orders immediately without waiting - optimized for mixed pallet sizes',
       routeGroup: group,
       waitTime: 0,
       truckConfiguration: truckConfig,
-      utilization: this.calculateUtilization(group.totalStandardPallets, truckConfig),
-      estimatedCost: this.calculateScenarioCost(group, truckConfig, 'immediate'),
-      estimatedTime: this.calculateScenarioTime(group, truckConfig, 'immediate'),
+      utilization: palletRecommendation.utilization || this.calculateUtilization(group.totalStandardPallets, truckConfig),
+      estimatedCost: palletRecommendation.totalCost || this.calculateScenarioCost(group, truckConfig, 'immediate'),
+      estimatedTime: palletRecommendation.totalTime || this.calculateScenarioTime(group, truckConfig, 'immediate'),
       consolidationSavings: 0,
-      recommendations: [],
-      truckCompanies: []
+      recommendations: [palletRecommendation.reason || 'Optimized for immediate dispatch'],
+      truckCompanies: [],
+      palletOptimization: palletRecommendation
     };
   }
 

@@ -81,46 +81,52 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Location *</label>
-                                    <select id="source" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">Select pickup city</option>
-                                        <option value="Sydney, NSW">Sydney, NSW</option>
-                                        <option value="Melbourne, VIC">Melbourne, VIC</option>
-                                        <option value="Brisbane, QLD">Brisbane, QLD</option>
-                                        <option value="Perth, WA">Perth, WA</option>
-                                        <option value="Adelaide, SA">Adelaide, SA</option>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Address *</label>
+                                    <textarea id="pickupAddress" rows="3" required
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                              placeholder="e.g., 123 Industrial Drive, Mascot NSW 2020
+Building 4, Loading Dock B"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Region</label>
+                                    <select id="pickupRegion" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select region (for distance calculation)</option>
+                                        <option value="Sydney, NSW">Sydney Metro, NSW</option>
+                                        <option value="Melbourne, VIC">Melbourne Metro, VIC</option>
+                                        <option value="Brisbane, QLD">Brisbane Metro, QLD</option>
+                                        <option value="Perth, WA">Perth Metro, WA</option>
+                                        <option value="Adelaide, SA">Adelaide Metro, SA</option>
                                         <option value="Gold Coast, QLD">Gold Coast, QLD</option>
                                         <option value="Newcastle, NSW">Newcastle, NSW</option>
                                         <option value="Canberra, ACT">Canberra, ACT</option>
+                                        <option value="Geelong, VIC">Geelong, VIC</option>
+                                        <option value="Townsville, QLD">Townsville, QLD</option>
                                     </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Address</label>
-                                    <textarea id="pickupAddress" rows="2"
-                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                              placeholder="Full pickup address (optional)"></textarea>
                                 </div>
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Location *</label>
-                                    <select id="destination" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">Select delivery city</option>
-                                        <option value="Sydney, NSW">Sydney, NSW</option>
-                                        <option value="Melbourne, VIC">Melbourne, VIC</option>
-                                        <option value="Brisbane, QLD">Brisbane, QLD</option>
-                                        <option value="Perth, WA">Perth, WA</option>
-                                        <option value="Adelaide, SA">Adelaide, SA</option>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Address *</label>
+                                    <textarea id="deliveryAddress" rows="3" required
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                              placeholder="e.g., 456 Warehouse Lane, Dandenong VIC 3175
+Reception area, 9AM-5PM business hours"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Region</label>
+                                    <select id="deliveryRegion" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select region (for distance calculation)</option>
+                                        <option value="Sydney, NSW">Sydney Metro, NSW</option>
+                                        <option value="Melbourne, VIC">Melbourne Metro, VIC</option>
+                                        <option value="Brisbane, QLD">Brisbane Metro, QLD</option>
+                                        <option value="Perth, WA">Perth Metro, WA</option>
+                                        <option value="Adelaide, SA">Adelaide Metro, SA</option>
                                         <option value="Gold Coast, QLD">Gold Coast, QLD</option>
                                         <option value="Newcastle, NSW">Newcastle, NSW</option>
                                         <option value="Canberra, ACT">Canberra, ACT</option>
+                                        <option value="Geelong, VIC">Geelong, VIC</option>
+                                        <option value="Townsville, QLD">Townsville, QLD</option>
                                     </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
-                                    <textarea id="deliveryAddress" rows="2"
-                                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                              placeholder="Full delivery address (optional)"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -297,14 +303,12 @@
         function addOrder() {
             const formData = {
                 id: `ORD-${orderIdCounter++}`,
-                customerName: document.getElementById('customerName').value || 'Customer ' + orderIdCounter,
+                customerName: document.getElementById('customerName').value || `Customer ${orderIdCounter}`,
                 contactInfo: document.getElementById('contactInfo').value,
-                source: document.getElementById('source').value,
-                destination: document.getElementById('destination').value,
-                actualAddress: {
-                    pickup: document.getElementById('pickupAddress').value || null,
-                    delivery: document.getElementById('deliveryAddress').value || null
-                },
+                pickupAddress: document.getElementById('pickupAddress').value.trim(),
+                deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
+                source: document.getElementById('pickupRegion').value || 'Unknown Region',
+                destination: document.getElementById('deliveryRegion').value || 'Unknown Region',
                 pallets: parseInt(document.getElementById('palletCount').value),
                 palletSize: document.getElementById('palletSize').value,
                 pickupDate: document.getElementById('pickupDate').value,
@@ -313,15 +317,20 @@
                 specialRequirements: document.getElementById('specialRequirements').value
             };
 
-            // Validation
-            if (!formData.source || !formData.destination || !formData.pallets || 
+            // Enhanced validation
+            if (!formData.pickupAddress || !formData.deliveryAddress || !formData.pallets || 
                 !formData.pickupDate || !formData.deliveryDate) {
-                alert('Please fill in all required fields.');
+                alert('Please fill in all required fields:\n- Pickup Address\n- Delivery Address\n- Number of Pallets\n- Pickup Date\n- Delivery Date');
                 return;
             }
 
-            if (formData.source === formData.destination) {
-                alert('Pickup and delivery locations must be different.');
+            if (formData.pickupAddress === formData.deliveryAddress) {
+                alert('Pickup and delivery addresses must be different.');
+                return;
+            }
+
+            if (formData.pallets < 1 || formData.pallets > 100) {
+                alert('Number of pallets must be between 1 and 100.');
                 return;
             }
 
@@ -335,11 +344,34 @@
             // Show consolidation controls
             document.getElementById('consolidation-controls').style.display = 'block';
             
-            // Reset form
-            document.getElementById('order-form').reset();
+            // Reset form completely
+            resetOrderForm();
             
             // Success feedback
             showNotification(`Order ${formData.id} added successfully!`, 'success');
+        }
+
+        function resetOrderForm() {
+            // Clear all form fields manually to ensure proper reset
+            document.getElementById('customerName').value = '';
+            document.getElementById('contactInfo').value = '';
+            document.getElementById('pickupAddress').value = '';
+            document.getElementById('deliveryAddress').value = '';
+            document.getElementById('pickupRegion').selectedIndex = 0;
+            document.getElementById('deliveryRegion').selectedIndex = 0;
+            document.getElementById('palletCount').value = '';
+            document.getElementById('palletSize').selectedIndex = 0;
+            document.getElementById('pickupDate').value = '';
+            document.getElementById('deliveryDate').value = '';
+            document.getElementById('urgency').selectedIndex = 0;
+            document.getElementById('specialRequirements').value = '';
+            
+            // Reset min dates
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dateString = tomorrow.toISOString().split('T')[0];
+            document.getElementById('pickupDate').min = dateString;
+            document.getElementById('deliveryDate').min = dateString;
         }
 
         function updateOrdersList() {
@@ -363,7 +395,8 @@
                     </div>
                     <div class="text-xs text-gray-600 space-y-1">
                         <div class="font-medium">${order.customerName}</div>
-                        <div>${order.source} → ${order.destination}</div>
+                        <div class="truncate" title="${order.pickupAddress}">${order.pickupAddress.length > 30 ? order.pickupAddress.substring(0, 30) + '...' : order.pickupAddress}</div>
+                        <div class="truncate text-gray-500" title="${order.deliveryAddress}">→ ${order.deliveryAddress.length > 25 ? order.deliveryAddress.substring(0, 25) + '...' : order.deliveryAddress}</div>
                         <div class="flex justify-between">
                             <span>${order.pallets} ${order.palletSize} pallets</span>
                             <span class="px-2 py-1 rounded text-xs ${
@@ -466,6 +499,9 @@
         });
 
         function displayConsolidationResults(result) {
+            // Store scenarios globally
+            currentScenarios = result.scenarios;
+            
             // Update summary
             const summaryDiv = document.getElementById('consolidation-summary');
             summaryDiv.innerHTML = `
@@ -622,12 +658,20 @@
                         </div>
                     ` : ''}
 
-                    <!-- Action Button -->
-                    <div class="text-center">
+                    <!-- Action Buttons -->
+                    <div class="text-center space-y-3">
                         <button onclick="selectScenario('${scenario.id}')" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg">
-                            Select This Scenario
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg">
+                            🚚 Select This Scenario & Book Trucks
                         </button>
+                        
+                        ${scenario.truckCompanies?.length > 0 ? `
+                            <div class="text-sm text-gray-600 mb-2">Quick Book with Top Carrier:</div>
+                            <button onclick="directBook('${scenario.truckCompanies[0].companyCode}', '${scenario.truckCompanies[0].contact.phone}', '${scenario.truckCompanies[0].companyName}')"
+                                    class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm">
+                                📞 Call ${scenario.truckCompanies[0].companyName} - ${scenario.truckCompanies[0].contact.phone}
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -643,8 +687,233 @@
         }
 
         function selectScenario(scenarioId) {
-            alert(`Scenario "${scenarioId}" selected! This would normally proceed to booking confirmation with the recommended truck companies.`);
+            // Find the selected scenario
+            const scenario = currentScenarios.find(s => s.id === scenarioId);
+            if (!scenario) return;
+
+            // Create booking summary
+            const bookingDetails = {
+                scenarioId: scenarioId,
+                scenarioName: scenario.name,
+                totalCost: scenario.estimatedCost,
+                totalTime: scenario.estimatedTime,
+                trucksRequired: scenario.trucksRequired || scenario.truckConfiguration?.length || 1,
+                truckCompanies: scenario.truckCompanies || [],
+                orders: orders,
+                timestamp: new Date().toISOString()
+            };
+
+            // Show booking confirmation modal
+            showBookingConfirmation(bookingDetails);
         }
+
+        function showBookingConfirmation(bookingDetails) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-2xl font-bold text-gray-900">Booking Confirmation</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="x" class="h-6 w-6"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-blue-900 mb-2">Selected Scenario: ${bookingDetails.scenarioName}</h4>
+                                <div class="grid grid-cols-3 gap-4 text-sm">
+                                    <div class="text-center">
+                                        <div class="font-bold text-blue-600">$${bookingDetails.totalCost?.toLocaleString() || 'TBD'}</div>
+                                        <div class="text-gray-600">Total Cost</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="font-bold text-blue-600">${bookingDetails.totalTime || 'TBD'}h</div>
+                                        <div class="text-gray-600">Transit Time</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="font-bold text-blue-600">${bookingDetails.trucksRequired}</div>
+                                        <div class="text-gray-600">Trucks</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <h5 class="font-medium text-gray-900">Recommended Truck Companies:</h5>
+                                ${bookingDetails.truckCompanies.slice(0, 3).map((company, index) => `
+                                    <div class="border rounded-lg p-3 ${index === 0 ? 'border-green-500 bg-green-50' : 'border-gray-200'}">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <div class="font-semibold">${company.companyName} ${index === 0 ? '⭐ Recommended' : ''}</div>
+                                                <div class="text-sm text-gray-600">${company.contact.phone} • ${company.contact.email}</div>
+                                            </div>
+                                            <button onclick="directBook('${company.companyCode}', '${company.contact.phone}', '${company.companyName}')" 
+                                                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+                                                📞 Call Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <div class="flex items-start">
+                                    <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-600 mr-2 mt-0.5"></i>
+                                    <div class="text-sm">
+                                        <div class="font-medium text-yellow-800">Booking Instructions:</div>
+                                        <ul class="text-yellow-700 mt-1 space-y-1">
+                                            <li>• Call the recommended company immediately to secure capacity</li>
+                                            <li>• Reference this optimization analysis (Booking ID: ${bookingDetails.scenarioId})</li>
+                                            <li>• Confirm all pickup and delivery addresses</li>
+                                            <li>• Request written quote matching our cost estimate</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-3">
+                                <button onclick="downloadBookingReport(${JSON.stringify(bookingDetails).replace(/"/g, '&quot;')})" 
+                                        class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg">
+                                    📄 Download Report
+                                </button>
+                                <button onclick="this.closest('.fixed').remove()" 
+                                        class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
+                                    ✅ Confirmed
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            lucide.createIcons();
+        }
+
+        function directBook(companyCode, phone, companyName) {
+            // Create booking reference
+            const bookingRef = `SKYA-${Date.now()}-${companyCode}`;
+            
+            // Prepare booking information
+            const bookingInfo = {
+                company: companyName,
+                phone: phone,
+                bookingReference: bookingRef,
+                totalOrders: orders.length,
+                totalPallets: orders.reduce((sum, order) => sum + order.pallets, 0),
+                routes: [...new Set(orders.map(order => `${order.source} → ${order.destination}`))],
+                urgentOrders: orders.filter(order => order.urgency === 'urgent').length
+            };
+
+            // Show direct booking modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <div class="bg-green-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <i data-lucide="phone" class="h-8 w-8 text-green-600"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900">Ready to Call ${companyName}</h3>
+                            <p class="text-gray-600 mt-2">Your booking information is prepared</p>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                            <div class="space-y-2 text-sm">
+                                <div><strong>Phone:</strong> ${phone}</div>
+                                <div><strong>Booking Reference:</strong> ${bookingRef}</div>
+                                <div><strong>Total Orders:</strong> ${bookingInfo.totalOrders}</div>
+                                <div><strong>Total Pallets:</strong> ${bookingInfo.totalPallets}</div>
+                                <div><strong>Routes:</strong> ${bookingInfo.routes.join(', ')}</div>
+                                ${bookingInfo.urgentOrders > 0 ? `<div class="text-red-600"><strong>Urgent Orders:</strong> ${bookingInfo.urgentOrders}</div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                            <h4 class="font-medium text-blue-900 mb-2">📞 What to say:</h4>
+                            <div class="text-sm text-blue-800 space-y-1">
+                                <p>"Hi, I need to book freight transport. Reference: ${bookingRef}"</p>
+                                <p>"I have ${bookingInfo.totalPallets} pallets across ${bookingInfo.totalOrders} orders"</p>
+                                <p>"Routes: ${bookingInfo.routes[0]}${bookingInfo.routes.length > 1 ? ` and ${bookingInfo.routes.length - 1} more` : ''}"</p>
+                                ${bookingInfo.urgentOrders > 0 ? `<p class="text-red-600">"${bookingInfo.urgentOrders} orders are urgent priority"</p>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button onclick="this.closest('.fixed').remove()" 
+                                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg">
+                                Cancel
+                            </button>
+                            <button onclick="window.open('tel:${phone}'); this.closest('.fixed').remove();" 
+                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-semibold">
+                                📞 Call ${phone}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            lucide.createIcons();
+        }
+
+        function downloadBookingReport(bookingDetails) {
+            // Create downloadable booking report
+            const report = `SKYA FREIGHT BOOKING REPORT
+========================================
+Date: ${new Date().toLocaleDateString()}
+Scenario: ${bookingDetails.scenarioName}
+Booking ID: ${bookingDetails.scenarioId}
+
+COST SUMMARY:
+- Estimated Total Cost: $${bookingDetails.totalCost?.toLocaleString() || 'TBD'}
+- Estimated Transit Time: ${bookingDetails.totalTime || 'TBD'} hours
+- Trucks Required: ${bookingDetails.trucksRequired}
+
+ORDERS SUMMARY:
+${bookingDetails.orders.map((order, index) => `
+Order ${index + 1}: ${order.id}
+- Customer: ${order.customerName}
+- Contact: ${order.contactInfo || 'Not provided'}
+- Pickup: ${order.pickupAddress}
+- Delivery: ${order.deliveryAddress}
+- Pallets: ${order.pallets} ${order.palletSize}
+- Urgency: ${order.urgency}
+- Dates: ${order.pickupDate} → ${order.deliveryDate}
+${order.specialRequirements ? '- Special Requirements: ' + order.specialRequirements : ''}
+`).join('')}
+
+RECOMMENDED CARRIERS:
+${bookingDetails.truckCompanies.map((company, index) => `
+${index + 1}. ${company.companyName} ${index === 0 ? '(RECOMMENDED)' : ''}
+   Phone: ${company.contact.phone}
+   Email: ${company.contact.email}
+   Website: ${company.contact.website}
+   Estimated Cost: $${company.estimatedCost?.toLocaleString() || 'Quote Required'}
+   Specialties: ${company.specialties?.join(', ') || 'General freight'}
+`).join('')}
+
+Generated by Skya Truck Optimisation Bot
+========================================`;
+
+            // Download the report
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Skya_Booking_Report_${bookingDetails.scenarioId}_${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Booking report downloaded successfully!', 'success');
+        }
+
+        // Store current scenarios globally for reference
+        let currentScenarios = [];
 
         // Clear all orders
         document.getElementById('clear-all-btn').addEventListener('click', function() {
