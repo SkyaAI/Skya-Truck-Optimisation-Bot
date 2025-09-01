@@ -38,6 +38,8 @@ const TRUCK_CAPACITIES = {
 const CONSOLIDATION_RULES = {
   minUtilization: 0.5, // 50% minimum utilization
   maxWaitDays: 5, // Maximum days to wait for consolidation
+  maxDelayDays: 2, // Maximum days late delivery allowed (customer constraint)
+  penaltyCostPerPalletPerDay: 0.50, // Customer penalty cost for late delivery
   urgentOverride: true, // Allow urgent orders to bypass wait time
   costSavingsThreshold: 0.15 // Minimum 15% cost savings to recommend waiting
 };
@@ -148,93 +150,64 @@ class ConsolidationService {
     return { critical, warning, safe, total: orders.length };
   }
 
-  // Create all possible dispatch scenarios - ensures complete fulfillment options
+  // Create deadline-optimized dispatch scenarios with penalty cost analysis
   createAllDispatchScenarios(group) {
     const scenarios = [];
     const today = moment();
+    const transitTime = 2; // Assume 2 days transit time
     
-    // Get all unique availability dates
-    const availabilityDates = this.getUniqueStockAvailabilityDates(group.orders);
+    // Generate multiple dispatch strategies
+    scenarios.push(...this.createDeadlineOptimizedScenarios(group));
+    scenarios.push(...this.createConsolidationScenarios(group));
     
-    // Always add today's scenario (even if no stock available)
-    if (!availabilityDates.some(date => date.isSame(today, 'day'))) {
-      availabilityDates.unshift(today.clone());
-    }
+    // Sort by total cost (truck cost + penalty cost)
+    return scenarios.sort((a, b) => a.totalCostWithPenalties - b.totalCostWithPenalties);
+  }
+
+  // Create scenarios optimized for meeting delivery deadlines
+  createDeadlineOptimizedScenarios(group) {
+    const scenarios = [];
+    const today = moment();
+    const transitTime = 2;
     
-    // Sort dates
-    availabilityDates.sort((a, b) => a.diff(b));
+    // Group orders by delivery deadline requirements
+    const ordersByDeadline = this.groupOrdersByDeliveryDeadline(group.orders, transitTime);
     
-    // Create scenario for each availability date
-    availabilityDates.forEach(availabilityDate => {
-      const waitDays = Math.max(0, availabilityDate.diff(today, 'days'));
+    // Create dispatch timeline scenarios
+    const dispatchTimeline = this.createOptimalDispatchTimeline(ordersByDeadline);
+    
+    dispatchTimeline.forEach((dispatchGroup, index) => {
+      const { dispatchDate, orders, isOnTime, delayDays } = dispatchGroup;
+      const waitDays = Math.max(0, dispatchDate.diff(today, 'days'));
       
-      // Get orders available by this date
-      const availableOrders = this.getAvailableOrdersForDate(group.orders, availabilityDate);
-      const unavailableOrders = group.orders.filter(order => 
-        !availableOrders.some(avail => avail.id === order.id)
-      );
+      // Calculate costs
+      const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(orders);
+      const truckCost = palletRecommendation.totalCost || 0;
+      const totalPallets = orders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+      const penaltyCost = this.calculatePenaltyCost(orders, dispatchDate, transitTime);
+      const totalCostWithPenalties = truckCost + penaltyCost;
       
-      if (availableOrders.length === 0) return; // Skip if no orders available
+      // Generate scenario name and description
+      let scenarioName, scenarioType = 'deadline-optimized';
+      const recommendations = [];
       
-      const totalPallets = availableOrders.reduce((sum, o) => sum + o.standardEquivalent, 0);
-      const deadlineRisk = this.assessDeadlineRisk(availableOrders);
-      
-      // Check if any orders would miss deadlines by waiting
-      const wouldMissDeadlines = availableOrders.some(order => {
-        const transitTime = 2; // Assume 2 days transit
-        const requiredDispatchDate = order.deliveryDate.clone().subtract(transitTime, 'days');
-        return availabilityDate.isAfter(requiredDispatchDate);
-      });
-      
-      // Get truck recommendation
-      const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(availableOrders);
-      
-      // Determine scenario name and recommendations
-      let scenarioName, scenarioType, recommendations = [];
-      
-      if (waitDays === 0) {
-        scenarioType = 'immediate';
-        if (availableOrders.length === group.orders.length) {
-          scenarioName = 'Dispatch All Orders Now';
-          recommendations.push(`All ${totalPallets} pallets ready for immediate dispatch`);
+      if (index === 0) {
+        scenarioName = `Deadline Compliance - Dispatch ${totalPallets} Pallets`;
+        if (isOnTime) {
+          recommendations.push(`✅ All orders arrive ON TIME`);
         } else {
-          scenarioName = `Dispatch Available Orders (${availableOrders.length}/${group.orders.length})`;
-          recommendations.push(`${totalPallets} pallets available now, ${unavailableOrders.length} orders need later dispatch`);
+          recommendations.push(`⚠️ Some orders ${delayDays} day${delayDays !== 1 ? 's' : ''} late`);
+          recommendations.push(`💰 Penalty cost: $${penaltyCost.toFixed(2)}`);
         }
       } else {
-        scenarioType = 'consolidation';
-        if (availableOrders.length === group.orders.length) {
-          scenarioName = `Wait ${waitDays} Day${waitDays !== 1 ? 's' : ''} - Complete Fulfillment`;
-          recommendations.push(`All ${totalPallets} pallets available by ${availabilityDate.format('MMM DD')}`);
-        } else {
-          scenarioName = `Wait ${waitDays} Day${waitDays !== 1 ? 's' : ''} - Partial Dispatch (${availableOrders.length}/${group.orders.length})`;
-          recommendations.push(`${totalPallets} pallets available by ${availabilityDate.format('MMM DD')}`);
-        }
+        scenarioName = `Alternative Dispatch ${index + 1} - ${totalPallets} Pallets`;
+        recommendations.push(`💰 Total cost: $${totalCostWithPenalties.toFixed(2)} (truck + penalties)`);
       }
       
-      // Add AI decision logic for waiting scenarios
-      if (waitDays > 0) {
-        const currentAvailable = this.getAvailableOrdersForDate(group.orders, today);
-        const currentPallets = currentAvailable.reduce((sum, o) => sum + o.standardEquivalent, 0);
-        
-        const aiDecision = this.makeAIConsolidationDecision({
-          currentPallets,
-          additionalPallets: totalPallets - currentPallets,
-          totalPallets,
-          waitDays,
-          deadlineRisk,
-          truckCapacity: palletRecommendation.allOptions?.[0]?.spec?.maxPallets || 22
-        });
-        
-        recommendations.push(...aiDecision.recommendations);
-      }
-      
-      // Add deadline warnings
-      if (wouldMissDeadlines) {
-        recommendations.unshift(`⚠️ WARNING: Waiting may cause deadline violations`);
-      }
-      if (deadlineRisk.critical > 0) {
-        recommendations.unshift(`🚨 ${deadlineRisk.critical} orders have critical deadlines`);
+      // Add cost breakdown
+      recommendations.push(`🚚 Truck cost: $${truckCost.toFixed(2)}`);
+      if (penaltyCost > 0) {
+        recommendations.push(`⚠️ Late penalty: $${penaltyCost.toFixed(2)} (${penaltyCost / CONSOLIDATION_RULES.penaltyCostPerPalletPerDay} pallet-days)`);
       }
       
       // Add utilization info
@@ -244,39 +217,143 @@ class ConsolidationService {
       } else if (utilization >= 50) {
         recommendations.push(`📊 ${utilization}% truck utilization`);
       } else {
-        recommendations.push(`⚠️ Low ${utilization}% truck utilization`);
+        recommendations.push(`⚠️ Low ${utilization}% truck utilization - consider smaller truck`);
       }
       
       const scenario = {
-        id: `${scenarioType}-${waitDays}-${group.routeKey}`,
+        id: `deadline-${index}-${group.routeKey}`,
         type: scenarioType,
         name: scenarioName,
-        description: waitDays === 0 ? 'Dispatch available stock immediately' : 
-                    `Wait ${waitDays} day${waitDays !== 1 ? 's' : ''} for additional stock`,
-        routeGroup: { ...group, orders: availableOrders },
-        availableOrders,
-        unavailableOrders,
+        description: `Dispatch on ${dispatchDate.format('MMM DD')} to ${isOnTime ? 'meet' : 'minimize delay for'} delivery deadlines`,
+        routeGroup: { ...group, orders },
+        availableOrders: orders,
+        dispatchDate: dispatchDate.format('YYYY-MM-DD'),
         waitTime: waitDays,
-        availabilityDate: availabilityDate.format('YYYY-MM-DD'),
         totalPalletsOnDate: totalPallets,
         truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
         utilization,
-        estimatedCost: palletRecommendation.totalCost || 0,
+        estimatedCost: truckCost,
+        penaltyCost,
+        totalCostWithPenalties,
         estimatedTime: (palletRecommendation.totalTime || 0) + (waitDays * 24),
-        consolidationSavings: waitDays > 0 ? Math.max(0, (utilization - 50) * 0.002) : 0,
+        isOnTime,
+        delayDays,
         recommendations,
-        deadlineRisk,
-        wouldMissDeadlines,
+        deadlineRisk: this.assessDeadlineRisk(orders),
         truckCompanies: [],
         palletOptimization: palletRecommendation,
-        score: this.calculateScenarioScore(utilization, waitDays, deadlineRisk, wouldMissDeadlines)
+        score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, isOnTime, utilization)
       };
       
       scenarios.push(scenario);
     });
     
-    // Sort scenarios by score (best first)
-    return scenarios.sort((a, b) => b.score - a.score);
+    return scenarios;
+  }
+
+  // Group orders by when they need to be dispatched to meet delivery deadlines
+  groupOrdersByDeliveryDeadline(orders, transitTime) {
+    const deadlineGroups = new Map();
+    
+    orders.forEach(order => {
+      const requiredDispatchDate = order.deliveryDate.clone().subtract(transitTime, 'days');
+      const actualDispatchDate = moment.max(order.pickupDate, requiredDispatchDate);
+      const dateKey = actualDispatchDate.format('YYYY-MM-DD');
+      
+      if (!deadlineGroups.has(dateKey)) {
+        deadlineGroups.set(dateKey, {
+          dispatchDate: actualDispatchDate,
+          orders: []
+        });
+      }
+      
+      deadlineGroups.get(dateKey).orders.push(order);
+    });
+    
+    return Array.from(deadlineGroups.values()).sort((a, b) => a.dispatchDate.diff(b.dispatchDate));
+  }
+
+  // Create optimal dispatch timeline considering stock availability and deadlines
+  createOptimalDispatchTimeline(ordersByDeadline) {
+    const timeline = [];
+    const today = moment();
+    const transitTime = 2;
+    
+    // Strategy 1: Dispatch each deadline group separately (highest cost but on-time)
+    ordersByDeadline.forEach(group => {
+      const { dispatchDate, orders } = group;
+      const delayDays = this.calculateDelayDays(orders, dispatchDate, transitTime);
+      
+      timeline.push({
+        dispatchDate,
+        orders,
+        isOnTime: delayDays === 0,
+        delayDays: Math.max(0, delayDays)
+      });
+    });
+    
+    // Strategy 2: Consolidation opportunities (potentially some delays but cost savings)
+    if (ordersByDeadline.length > 1) {
+      // Try consolidating first two groups
+      const consolidatedOrders = [...ordersByDeadline[0].orders, ...ordersByDeadline[1].orders];
+      const consolidatedDispatchDate = ordersByDeadline[1].dispatchDate; // Dispatch at later date
+      const delayDays = this.calculateDelayDays(consolidatedOrders, consolidatedDispatchDate, transitTime);
+      
+      // Only add if delay is within acceptable limits
+      if (delayDays <= CONSOLIDATION_RULES.maxDelayDays) {
+        timeline.push({
+          dispatchDate: consolidatedDispatchDate,
+          orders: consolidatedOrders,
+          isOnTime: delayDays === 0,
+          delayDays: Math.max(0, delayDays)
+        });
+      }
+    }
+    
+    return timeline;
+  }
+
+  // Calculate penalty cost for late deliveries
+  calculatePenaltyCost(orders, dispatchDate, transitTime) {
+    let totalPenalty = 0;
+    
+    orders.forEach(order => {
+      const deliveryDate = dispatchDate.clone().add(transitTime, 'days');
+      const daysLate = Math.max(0, deliveryDate.diff(order.deliveryDate, 'days'));
+      const palletPenalty = daysLate * order.standardEquivalent * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay;
+      totalPenalty += palletPenalty;
+    });
+    
+    return totalPenalty;
+  }
+
+  // Calculate how many days late orders would be
+  calculateDelayDays(orders, dispatchDate, transitTime) {
+    let maxDelayDays = 0;
+    
+    orders.forEach(order => {
+      const deliveryDate = dispatchDate.clone().add(transitTime, 'days');
+      const daysLate = Math.max(0, deliveryDate.diff(order.deliveryDate, 'days'));
+      maxDelayDays = Math.max(maxDelayDays, daysLate);
+    });
+    
+    return maxDelayDays;
+  }
+
+  // Calculate score prioritizing total cost (truck + penalties)
+  calculateDeadlineOptimizedScore(totalCost, isOnTime, utilization) {
+    let score = 100; // Start with base score
+    
+    // Prioritize on-time delivery
+    if (isOnTime) score += 50;
+    
+    // Prefer lower total costs
+    score -= totalCost / 100; // Reduce score by cost/100
+    
+    // Bonus for good utilization
+    score += utilization / 10;
+    
+    return Math.max(0, score);
   }
 
   // Calculate scenario score for ranking
@@ -432,7 +509,198 @@ class ConsolidationService {
 
   // Legacy immediate scenario function - replaced by createAllDispatchScenarios
 
-  // Old consolidation functions replaced by comprehensive createAllDispatchScenarios
+  // Create traditional consolidation scenarios with penalty cost consideration
+  createConsolidationScenarios(group) {
+    const scenarios = [];
+    const today = moment();
+    const transitTime = 2;
+    
+    // Get all unique availability dates
+    const availabilityDates = this.getUniqueStockAvailabilityDates(group.orders);
+    
+    // Create scenarios for each potential dispatch date
+    availabilityDates.forEach((dispatchDate, index) => {
+      const availableOrders = this.getAvailableOrdersForDate(group.orders, dispatchDate);
+      const totalPallets = availableOrders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+      const waitDays = Math.max(0, dispatchDate.diff(today, 'days'));
+      
+      // Skip if no orders available or wait time exceeds limit
+      if (totalPallets === 0 || waitDays > CONSOLIDATION_RULES.maxWaitDays) return;
+      
+      // Calculate costs
+      const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(availableOrders);
+      const truckCost = palletRecommendation.totalCost || 0;
+      const penaltyCost = this.calculatePenaltyCost(availableOrders, dispatchDate, transitTime);
+      const totalCostWithPenalties = truckCost + penaltyCost;
+      
+      // Calculate utilization and efficiency metrics
+      const utilization = palletRecommendation.utilization || 0;
+      const deadlineRisk = this.assessDeadlineRisk(availableOrders);
+      const delayDays = this.calculateDelayDays(availableOrders, dispatchDate, transitTime);
+      
+      // Skip if delays exceed maximum allowed
+      if (delayDays > CONSOLIDATION_RULES.maxDelayDays) return;
+      
+      // Generate scenario recommendations
+      const recommendations = [];
+      
+      // Analyze consolidation benefits
+      if (utilization >= 80) {
+        recommendations.push(`✅ Excellent ${utilization}% truck utilization`);
+      } else if (utilization >= 60) {
+        recommendations.push(`📊 Good ${utilization}% truck utilization`);
+      } else {
+        recommendations.push(`⚠️ Moderate ${utilization}% utilization - consider alternatives`);
+      }
+      
+      // Add cost analysis
+      recommendations.push(`🚚 Truck cost: $${truckCost.toFixed(2)}`);
+      if (penaltyCost > 0) {
+        const penaltyPalletDays = penaltyCost / CONSOLIDATION_RULES.penaltyCostPerPalletPerDay;
+        recommendations.push(`⚠️ Late penalty: $${penaltyCost.toFixed(2)} (${penaltyPalletDays} pallet-days)`);
+      } else {
+        recommendations.push(`✅ No delivery penalties - all orders on time`);
+      }
+      
+      // Add wait time assessment
+      if (waitDays === 0) {
+        recommendations.push(`🚀 Immediate dispatch available`);
+      } else if (waitDays <= 2) {
+        recommendations.push(`⏱️ Short ${waitDays}-day wait for consolidation`);
+      } else {
+        recommendations.push(`⏳ Extended ${waitDays}-day wait - consider risk vs savings`);
+      }
+      
+      // AI consolidation decision
+      const currentOrdersCount = availableOrders.length;
+      const totalOrdersCount = group.orders.length;
+      const consolidationRatio = currentOrdersCount / totalOrdersCount;
+      
+      if (consolidationRatio >= 0.8) {
+        recommendations.push(`💡 High consolidation: ${currentOrdersCount}/${totalOrdersCount} orders`);
+      } else if (consolidationRatio >= 0.5) {
+        recommendations.push(`📊 Partial consolidation: ${currentOrdersCount}/${totalOrdersCount} orders`);
+      } else {
+        recommendations.push(`⚠️ Limited consolidation: ${currentOrdersCount}/${totalOrdersCount} orders`);
+      }
+      
+      // Create scenario
+      const scenario = {
+        id: `consolidation-${index}-${group.routeKey}`,
+        type: waitDays === 0 ? 'immediate' : 'consolidation',
+        name: waitDays === 0 ? 
+          `Immediate Dispatch - ${totalPallets} Pallets` : 
+          `Wait ${waitDays} Day${waitDays !== 1 ? 's' : ''} - Consolidate ${totalPallets} Pallets`,
+        description: waitDays === 0 ? 
+          'Dispatch all available stock immediately' :
+          `Wait for optimal consolidation on ${dispatchDate.format('MMM DD')}`,
+        routeGroup: { ...group, orders: availableOrders },
+        availableOrders,
+        dispatchDate: dispatchDate.format('YYYY-MM-DD'),
+        waitTime: waitDays,
+        totalPalletsOnDate: totalPallets,
+        truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
+        utilization,
+        estimatedCost: truckCost,
+        penaltyCost,
+        totalCostWithPenalties,
+        estimatedTime: (palletRecommendation.totalTime || 0) + (waitDays * 24),
+        delayDays,
+        isOnTime: delayDays === 0,
+        recommendations,
+        deadlineRisk,
+        truckCompanies: [],
+        palletOptimization: palletRecommendation,
+        score: this.calculateConsolidationScore(totalCostWithPenalties, waitDays, utilization, delayDays),
+        aiDecision: this.makeConsolidationAIDecision({
+          totalCost: totalCostWithPenalties,
+          waitDays,
+          utilization,
+          delayDays,
+          penaltyCost,
+          consolidationRatio
+        })
+      };
+      
+      scenarios.push(scenario);
+    });
+    
+    return scenarios;
+  }
+
+  // AI decision engine for consolidation scenarios
+  makeConsolidationAIDecision({ totalCost, waitDays, utilization, delayDays, penaltyCost, consolidationRatio }) {
+    let recommend = false;
+    let confidence = 'medium';
+    const reasons = [];
+    
+    // Rule 1: No delays and good utilization = recommend
+    if (delayDays === 0 && utilization >= 70) {
+      recommend = true;
+      confidence = 'high';
+      reasons.push('No delays with excellent utilization');
+    }
+    // Rule 2: Small penalty cost vs significant consolidation = recommend  
+    else if (penaltyCost < totalCost * 0.1 && consolidationRatio >= 0.6) {
+      recommend = true;
+      confidence = 'medium';
+      reasons.push('Minor penalty cost justified by consolidation savings');
+    }
+    // Rule 3: Immediate dispatch with good utilization = recommend
+    else if (waitDays === 0 && utilization >= 50) {
+      recommend = true;
+      confidence = 'high';
+      reasons.push('Immediate dispatch with acceptable utilization');
+    }
+    // Rule 4: High penalty cost = not recommend
+    else if (penaltyCost > totalCost * 0.2) {
+      recommend = false;
+      confidence = 'high';
+      reasons.push('Penalty costs too high relative to truck costs');
+    }
+    // Rule 5: Long wait with low consolidation = not recommend
+    else if (waitDays > 2 && consolidationRatio < 0.5) {
+      recommend = false;
+      confidence = 'medium';
+      reasons.push('Extended wait with limited consolidation benefit');
+    }
+    // Default: moderate recommendation based on cost-benefit
+    else {
+      const costBenefit = (utilization - 50) / 50 - (waitDays * 10) - (penaltyCost / totalCost * 100);
+      recommend = costBenefit > 0;
+      confidence = 'low';
+      reasons.push('Balanced cost-benefit analysis');
+    }
+    
+    return {
+      recommend,
+      confidence,
+      reasons,
+      totalCostImpact: `$${totalCost.toFixed(2)} (truck: $${(totalCost - penaltyCost).toFixed(2)} + penalties: $${penaltyCost.toFixed(2)})`
+    };
+  }
+
+  // Calculate score for consolidation scenarios
+  calculateConsolidationScore(totalCost, waitDays, utilization, delayDays) {
+    let score = 100; // Base score
+    
+    // Cost efficiency (lower cost = higher score)
+    score -= totalCost / 100;
+    
+    // Utilization bonus
+    score += utilization / 2;
+    
+    // Wait time penalty
+    score -= waitDays * 10;
+    
+    // Delay penalty (severe)
+    score -= delayDays * 25;
+    
+    // On-time bonus
+    if (delayDays === 0) score += 20;
+    
+    return Math.max(0, score);
+  }
 
   createPartialConsolidationScenarios(group) {
     const scenarios = [];
@@ -539,8 +807,9 @@ class ConsolidationService {
   }
 
   recommendTruckCompanies(scenario) {
+    const truckConfig = scenario.truckConfiguration || [];
     const criteria = {
-      truckType: scenario.truckConfiguration[0]?.type || 'SEMI',
+      truckType: truckConfig.length > 0 ? truckConfig[0].type : 'SEMI',
       sourceLocation: scenario.routeGroup.sourceCity,
       destinationLocation: scenario.routeGroup.destinationCity,
       urgency: scenario.routeGroup.urgentOrders > 0 ? 'urgent' : 'standard',
@@ -553,7 +822,7 @@ class ConsolidationService {
       ...company,
       estimatedCost: Math.round(scenario.estimatedCost * company.estimatedCostMultiplier),
       estimatedTime: Math.round(scenario.estimatedTime * company.estimatedTimeBonus * 10) / 10,
-      truckTypes: scenario.truckConfiguration.map(truck => ({
+      truckTypes: (scenario.truckConfiguration || []).map(truck => ({
         type: truck.type,
         quantity: 1,
         pallets: truck.pallets,
