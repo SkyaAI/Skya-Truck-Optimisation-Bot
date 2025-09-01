@@ -7,7 +7,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '13-15-19',
       website: 'www.tollgroup.com',
-      email: 'customerservice@tollgroup.com'
+      email: 'customerservice@tollgroup.com',
+      bookingUrl: 'https://www.tollgroup.com/get-a-quote'
     },
     specialties: ['B-Double', 'Semi-Trailer', 'Express'],
     coverage: ['National', 'Interstate', 'Urban'],
@@ -24,7 +25,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1300-546-369',
       website: 'www.linfox.com',
-      email: 'enquiries@linfox.com'
+      email: 'enquiries@linfox.com',
+      bookingUrl: 'https://www.linfox.com/contact-us/quote-request'
     },
     specialties: ['B-Double', 'Semi-Trailer', 'Warehousing'],
     coverage: ['National', 'Interstate'],
@@ -41,7 +43,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '13-23-45',
       website: 'www.startrack.com.au',
-      email: 'customer.service@startrack.com.au'
+      email: 'customer.service@startrack.com.au',
+      bookingUrl: 'https://www.startrack.com.au/book-send'
     },
     specialties: ['Express', 'Next Day', 'Same Day'],
     coverage: ['National', 'Metro', 'Regional'],
@@ -58,7 +61,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1800-685-525',
       website: 'www.mainfreight.com.au',
-      email: 'enquiry@mainfreight.com.au'
+      email: 'enquiry@mainfreight.com.au',
+      bookingUrl: 'https://www.mainfreight.com.au/services/quote-request'
     },
     specialties: ['B-Double', 'Interstate', 'Cross-dock'],
     coverage: ['National', 'Interstate'],
@@ -77,7 +81,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1800-066-782',
       website: 'www.northline.com.au',
-      email: 'bookings@northline.com.au'
+      email: 'bookings@northline.com.au',
+      bookingUrl: 'https://www.northline.com.au/freight-quote'
     },
     specialties: ['Regional', 'Queensland', 'Northern Routes'],
     coverage: ['QLD', 'NT', 'Northern NSW'],
@@ -94,7 +99,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1300-774-927',
       website: 'www.prixcar.com.au',
-      email: 'enquiries@prixcar.com.au'
+      email: 'enquiries@prixcar.com.au',
+      bookingUrl: 'https://www.prixcar.com.au/get-quote'
     },
     specialties: ['Vehicle Transport', 'Specialized'],
     coverage: ['National'],
@@ -111,7 +117,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1300-236-887',
       website: 'www.centurion.com.au',
-      email: 'bookings@centurion.com.au'
+      email: 'bookings@centurion.com.au',
+      bookingUrl: 'https://www.centurion.com.au/quote-request'
     },
     specialties: ['B-Double', 'Cost Effective', 'Bulk'],
     coverage: ['Eastern States'],
@@ -128,7 +135,8 @@ const TRUCK_COMPANIES = {
     contact: {
       phone: '1800-639-059',
       website: 'www.borderexpress.com.au',
-      email: 'bookings@borderexpress.com.au'
+      email: 'bookings@borderexpress.com.au',
+      bookingUrl: 'https://www.borderexpress.com.au/get-quote'
     },
     specialties: ['Interstate', 'Next Day', 'Express'],
     coverage: ['Eastern States'],
