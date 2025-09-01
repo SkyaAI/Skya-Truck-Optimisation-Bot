@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Add Order</title>
+</head>
+<body>
+    <h1>Testing Add Order Functionality</h1>
+    <iframe id="testFrame" src="https://5000-i6k13rhxnugcxytsjfxtt-6532622b.e2b.dev/" width="100%" height="800px"></iframe>
+    
+    <script>
+        // Wait for iframe to load then test form submission
+        document.getElementById('testFrame').onload = function() {
+            setTimeout(() => {
+                const iframe = document.getElementById('testFrame');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                console.log('Testing form fill and submission...');
+                
+                // Fill out the form
+                try {
+                    iframeDoc.getElementById('customerName').value = 'Test Customer ABC';
+                    iframeDoc.getElementById('customerContact').value = '0412345678';
+                    iframeDoc.getElementById('pickupContact').value = 'John Smith (02)9876-5432';
+                    iframeDoc.getElementById('pickupAddress').value = '123 Industrial St, Sydney NSW 2000\nWarehouse B, Dock 3\nAccess: Mon-Fri 8AM-5PM';
+                    iframeDoc.getElementById('deliveryAddress').value = '456 Business Ave, Melbourne VIC 3000\nReception Level 2\nContact: Sarah (03)1234-5678';
+                    iframeDoc.getElementById('palletCount').value = '3';
+                    
+                    // Set dates
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    
+                    iframeDoc.getElementById('pickupDate').value = tomorrow.toISOString().split('T')[0];
+                    iframeDoc.getElementById('deliveryDate').value = nextWeek.toISOString().split('T')[0];
+                    
+                    console.log('Form filled successfully');
+                    
+                    // Submit the form
+                    const submitBtn = iframeDoc.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.click();
+                        console.log('Submit button clicked');
+                    } else {
+                        console.error('Submit button not found');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error filling form:', error);
+                }
+            }, 3000);
+        };
+    </script>
+</body>
+</html>
