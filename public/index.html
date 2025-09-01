@@ -42,10 +42,10 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Introduction -->
         <div class="text-center mb-8 fade-in">
-            <h2 class="text-3xl font-bold text-gray-900 mb-4">Smart Multi-Order Consolidation</h2>
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Australian Freight Optimization</h2>
             <p class="text-lg text-gray-600 max-w-4xl mx-auto">
-                Optimize freight costs by consolidating multiple orders. Our AI analyzes truck utilization, 
-                wait times, and cost savings to recommend the best consolidation strategy.
+                Simply enter your pickup/delivery details and let our AI find the best truck and route. 
+                One-click booking with Australia's top freight companies.
             </p>
         </div>
 
@@ -60,81 +60,45 @@
                     </div>
 
                     <form id="order-form" class="space-y-6">
-                        <!-- Customer Information -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
-                                <input type="text" id="customerName" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       placeholder="Customer or company name">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Customer Contact</label>
-                                <input type="text" id="customerContact" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       placeholder="Customer phone or email">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Contact</label>
-                                <input type="text" id="pickupContact" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       placeholder="Pickup site contact">
-                            </div>
-                        </div>
+                        <!-- Essential Information Only -->
 
-                        <!-- Route Information -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Addresses -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Address *</label>
-                                <textarea id="pickupAddress" rows="4" required
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                          placeholder="e.g., 123 Industrial Drive, Mascot NSW 2020
-Building 4, Loading Dock B
-Contact: John Smith (02) 9xxx-xxxx
-Access: 24/7, Forklift available"></textarea>
-                                <p class="text-xs text-gray-500 mt-1">Include full address with suburb, state, and postcode. Add contact details and access instructions.</p>
+                                <input type="text" id="pickupAddress" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="e.g., 123 Industrial St, Mascot NSW 2020">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Delivery Address *</label>
-                                <textarea id="deliveryAddress" rows="4" required
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                          placeholder="e.g., 456 Warehouse Lane, Dandenong VIC 3175
-Reception area, Dock Door 3
-Contact: Sarah Jones (03) 9xxx-xxxx
-Hours: Mon-Fri 9AM-5PM"></textarea>
-                                <p class="text-xs text-gray-500 mt-1">Include delivery instructions, business hours, and contact person details.</p>
+                                <input type="text" id="deliveryAddress" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="e.g., 456 Business Ave, Melbourne VIC 3000">
                             </div>
                         </div>
 
                         <!-- Pallet Information -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Number of Pallets *</label>
                                 <input type="number" id="palletCount" required min="1" max="100" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       placeholder="Pallets">
+                                       placeholder="e.g., 3">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Pallet Size *</label>
                                 <select id="palletSize" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="standard">Standard (1200×1200×1200mm)</option>
-                                    <option value="euro">Euro (1200×800×1200mm)</option>
-                                    <option value="half">Half (600×1200×1200mm)</option>
-                                    <option value="quarter">Quarter (600×800×1200mm)</option>
-                                    <option value="oversized">Oversized (1200×1200×1800mm)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Urgency *</label>
-                                <select id="urgency" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="standard">Standard (2-3 days)</option>
-                                    <option value="express">Express (1-2 days)</option>
-                                    <option value="urgent">Urgent (Same/Next day)</option>
+                                    <option value="standard">Standard (1200×1200mm)</option>
+                                    <option value="euro">Euro (1200×800mm)</option>
+                                    <option value="half">Half (600×1200mm)</option>
+                                    <option value="quarter">Quarter (600×800mm)</option>
+                                    <option value="oversized">Oversized (custom)</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Timing Information -->
+                        <!-- Dates -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Date *</label>
@@ -146,14 +110,6 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
                                 <input type="date" id="deliveryDate" required 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
-                        </div>
-
-                        <!-- Special Requirements -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Special Requirements</label>
-                            <textarea id="specialRequirements" rows="2"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Fragile, temperature controlled, hazardous materials, etc."></textarea>
                         </div>
 
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg">
@@ -311,11 +267,21 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
             const deliveryAddress = document.getElementById('deliveryAddress').value.trim();
             console.log('Addresses:', {pickupAddress, deliveryAddress});
             
+            // Auto-determine urgency based on dates
+            const pickupDate = new Date(document.getElementById('pickupDate').value);
+            const deliveryDate = new Date(document.getElementById('deliveryDate').value);
+            const today = new Date();
+            const daysDiff = Math.ceil((deliveryDate - today) / (1000 * 60 * 60 * 24));
+            
+            let urgency = 'standard';
+            if (daysDiff <= 1) urgency = 'urgent';
+            else if (daysDiff <= 2) urgency = 'express';
+            
             const formData = {
                 id: `ORD-${orderIdCounter++}`,
-                customerName: document.getElementById('customerName').value || `Customer ${orderIdCounter}`,
-                customerContact: document.getElementById('customerContact').value,
-                pickupContact: document.getElementById('pickupContact').value,
+                customerName: `Order ${orderIdCounter}`, // Auto-generated
+                customerContact: '', // Not needed for optimization
+                pickupContact: '', // Not needed for optimization  
                 pickupAddress: pickupAddress,
                 deliveryAddress: deliveryAddress,
                 source: extractLocationFromAddress(pickupAddress),
@@ -324,14 +290,14 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
                 palletSize: document.getElementById('palletSize').value,
                 pickupDate: document.getElementById('pickupDate').value,
                 deliveryDate: document.getElementById('deliveryDate').value,
-                urgency: document.getElementById('urgency').value,
-                specialRequirements: document.getElementById('specialRequirements').value
+                urgency: urgency, // Auto-determined
+                specialRequirements: '' // Not needed for optimization
             };
 
-            // Enhanced validation
+            // Simplified validation - only check essential fields
             if (!formData.pickupAddress || !formData.deliveryAddress || !formData.pallets || 
                 !formData.pickupDate || !formData.deliveryDate) {
-                alert('Please fill in all required fields:\n- Pickup Address\n- Delivery Address\n- Number of Pallets\n- Pickup Date\n- Delivery Date');
+                alert('Please fill in all fields to optimize your freight route.');
                 return;
             }
 
@@ -365,19 +331,13 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
         }
 
         function resetOrderForm() {
-            // Clear all form fields manually to ensure proper reset
-            document.getElementById('customerName').value = '';
-            document.getElementById('customerContact').value = '';
-            document.getElementById('pickupContact').value = '';
+            // Clear only the simplified form fields
             document.getElementById('pickupAddress').value = '';
             document.getElementById('deliveryAddress').value = '';
-            // Region fields removed - addresses are self-contained
             document.getElementById('palletCount').value = '';
             document.getElementById('palletSize').selectedIndex = 0;
             document.getElementById('pickupDate').value = '';
             document.getElementById('deliveryDate').value = '';
-            document.getElementById('urgency').selectedIndex = 0;
-            document.getElementById('specialRequirements').value = '';
             
             // Reset min dates
             const tomorrow = new Date();
@@ -399,26 +359,17 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
             }
 
             ordersList.innerHTML = orders.map((order, index) => `
-                <div class="order-card bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="order-card bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="font-medium text-sm text-gray-900">${order.id}</span>
+                        <span class="font-medium text-sm text-blue-600">${order.pallets} ${order.palletSize} pallets</span>
                         <button onclick="removeOrder(${index})" class="text-red-500 hover:text-red-700">
                             <i data-lucide="x" class="h-4 w-4"></i>
                         </button>
                     </div>
                     <div class="text-xs text-gray-600 space-y-1">
-                        <div class="font-medium">${order.customerName}</div>
-                        <div class="truncate" title="${order.pickupAddress}">${order.pickupAddress.length > 30 ? order.pickupAddress.substring(0, 30) + '...' : order.pickupAddress}</div>
-                        <div class="truncate text-gray-500" title="${order.deliveryAddress}">→ ${order.deliveryAddress.length > 25 ? order.deliveryAddress.substring(0, 25) + '...' : order.deliveryAddress}</div>
-                        <div class="flex justify-between">
-                            <span>${order.pallets} ${order.palletSize} pallets</span>
-                            <span class="px-2 py-1 rounded text-xs ${
-                                order.urgency === 'urgent' ? 'bg-red-100 text-red-800' :
-                                order.urgency === 'express' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                            }">${order.urgency}</span>
-                        </div>
-                        <div class="text-gray-500">${formatDate(order.pickupDate)} → ${formatDate(order.deliveryDate)}</div>
+                        <div class="truncate" title="${order.pickupAddress}">📍 ${order.pickupAddress}</div>
+                        <div class="truncate text-gray-500" title="${order.deliveryAddress}">🎯 ${order.deliveryAddress}</div>
+                        <div class="text-gray-500">📅 ${formatDate(order.pickupDate)} → ${formatDate(order.deliveryDate)}</div>
                     </div>
                 </div>
             `).join('');
@@ -894,18 +845,28 @@ Hours: Mon-Fri 9AM-5PM"></textarea>
                 return;
             }
             
-            // Prepare booking information
+            // Prepare comprehensive booking data for auto-filling forms
+            const totalPallets = orders.reduce((sum, order) => sum + order.pallets, 0);
+            const allPickups = orders.map(o => o.pickupAddress).join(' | ');
+            const allDeliveries = orders.map(o => o.deliveryAddress).join(' | ');
+            const earliestPickup = orders.reduce((earliest, order) => 
+                !earliest || order.pickupDate < earliest ? order.pickupDate : earliest, null);
+            const latestDelivery = orders.reduce((latest, order) => 
+                !latest || order.deliveryDate > latest ? order.deliveryDate : latest, null);
+            
             const bookingInfo = {
                 company: companyName,
                 bookingReference: bookingRef,
-                totalOrders: orders.length,
-                totalPallets: orders.reduce((sum, order) => sum + order.pallets, 0),
-                routes: [...new Set(orders.map(order => `${order.source} → ${order.destination}`))],
-                urgentOrders: orders.filter(order => order.urgency === 'urgent').length
+                totalPallets: totalPallets,
+                pickupAddresses: allPickups,
+                deliveryAddresses: allDeliveries,
+                pickupDate: earliestPickup,
+                deliveryDate: latestDelivery,
+                routes: [...new Set(orders.map(order => `${order.source} → ${order.destination}`))].join(', ')
             };
 
-            // Show redirect confirmation
-            const confirmMessage = `Redirecting to ${companyName} booking page.\n\nBooking Reference: ${bookingRef}\nTotal Orders: ${bookingInfo.totalOrders}\nTotal Pallets: ${bookingInfo.totalPallets}\nRoutes: ${bookingInfo.routes.join(', ')}\n\nClick OK to proceed to their website.`;
+            // Show simplified confirmation
+            const confirmMessage = `Ready to book with ${companyName}\n\n📦 ${totalPallets} pallets\n📍 ${orders[0].source} → ${orders[0].destination}\n📅 ${earliestPickup} to ${latestDelivery}\n🆔 Reference: ${bookingRef}\n\nProceed to booking page?`;
             
             if (confirm(confirmMessage)) {
                 // Store booking reference for user reference
