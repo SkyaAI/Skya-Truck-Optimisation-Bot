@@ -792,12 +792,61 @@ class ConsolidationService {
   generateConsolidationScenarios(routeGroups) {
     const scenarios = [];
 
+    // Generate individual route scenarios
     routeGroups.forEach(group => {
-      // Generate all possible dispatch scenarios based on stock availability dates
       scenarios.push(...this.createAllDispatchScenarios(group));
     });
 
+    // Generate cross-route consolidation scenarios (handles ALL pallets)
+    if (routeGroups.length > 1) {
+      scenarios.push(...this.createCrossRouteConsolidationScenarios(routeGroups));
+    }
+
     return scenarios;
+  }
+
+  // Create scenarios that consolidate across ALL routes (handles all pallets together)
+  createCrossRouteConsolidationScenarios(routeGroups) {
+    const scenarios = [];
+    const allOrders = routeGroups.flatMap(group => group.orders);
+    const totalPallets = allOrders.reduce((sum, order) => sum + order.standardEquivalent, 0);
+    
+    if (totalPallets === 0) return scenarios;
+
+    // Create a mega-group that includes all orders across all routes
+    const megaGroup = {
+      routeKey: 'multi-route',
+      sourceCity: 'Multiple',
+      destinationCity: 'Multiple',
+      orders: allOrders,
+      totalVolume: allOrders.reduce((sum, o) => sum + o.totalVolume, 0),
+      totalWeight: allOrders.reduce((sum, o) => sum + o.totalWeight, 0),
+      totalStandardPallets: totalPallets,
+      urgentOrders: allOrders.filter(o => o.urgency === 'urgent').length,
+      earliestPickup: allOrders.reduce((earliest, o) => !earliest || o.pickupDate.isBefore(earliest) ? o.pickupDate : earliest, null),
+      latestDelivery: allOrders.reduce((latest, o) => !latest || o.deliveryDate.isAfter(latest) ? o.deliveryDate : latest, null)
+    };
+
+    // Generate comprehensive scenarios for ALL pallets
+    const crossRouteScenarios = this.createAllDispatchScenarios(megaGroup);
+    
+    // Mark these as cross-route scenarios and update names
+    crossRouteScenarios.forEach(scenario => {
+      scenario.id = `cross-route-${scenario.id}`;
+      scenario.type = `multi-route-${scenario.type}`;
+      scenario.name = scenario.name.replace(/\d+ Pallets/, `ALL ${totalPallets} Pallets (Multi-Route)`);
+      scenario.description = `${scenario.description} - Consolidates ${routeGroups.length} different routes`;
+      scenario.isCrossRoute = true;
+      
+      // Add route breakdown to recommendations
+      const routeBreakdown = routeGroups.map(group => 
+        `${group.orders.length} orders (${group.totalStandardPallets} pallets) to ${group.destinationCity}`
+      ).join(', ');
+      
+      scenario.recommendations.unshift(`🗺️ Multi-route consolidation: ${routeBreakdown}`);
+    });
+
+    return crossRouteScenarios;
   }
 
   // Legacy immediate scenario function - replaced by createAllDispatchScenarios
