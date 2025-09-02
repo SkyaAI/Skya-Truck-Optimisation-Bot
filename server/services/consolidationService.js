@@ -326,6 +326,9 @@ class ConsolidationService {
     const totalCostWithPenalties = truckCost + penaltyCost;
     const waitDays = Math.max(0, dispatchDate.diff(today, 'days'));
     
+    // Calculate proper utilization - fix 0% issue
+    const actualUtilization = this.calculateActualUtilization(palletRecommendation, totalPallets);
+    
     return {
       id: `cost-minimized-${group.routeKey}`,
       type: 'cost-optimized', 
