@@ -1737,8 +1737,8 @@ class ConsolidationService {
   }
 
   evaluateScenario(scenario) {
-    // Add truck company recommendations
-    scenario.truckCompanies = this.recommendTruckCompanies(scenario);
+    // Skip truck company recommendations as requested by user
+    scenario.truckCompanies = [];
     
     // Calculate overall score
     scenario.score = this.calculateScenarioScore(scenario);
