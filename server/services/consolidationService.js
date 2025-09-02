@@ -205,6 +205,9 @@ class ConsolidationService {
     const totalCostWithPenalties = truckCost + penaltyCost;
     const waitDays = Math.max(0, allStockAvailableDate.diff(today, 'days'));
     
+    // Calculate proper utilization - fix 0% issue
+    const actualUtilization = this.calculateActualUtilization(palletRecommendation, totalPallets);
+    
     return {
       id: `immediate-all-${group.routeKey}`,
       type: 'immediate-complete',
@@ -216,7 +219,7 @@ class ConsolidationService {
       waitTime: waitDays,
       totalPalletsOnDate: totalPallets,
       truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
-      utilization: palletRecommendation.utilization || 0,
+      utilization: actualUtilization,
       estimatedCost: truckCost,
       penaltyCost,
       totalCostWithPenalties,
@@ -269,11 +272,8 @@ class ConsolidationService {
       maxEstimatedTime = Math.max(maxEstimatedTime, recommendation.totalTime || 20);
     });
     
-    // Calculate average utilization across all dispatches
-    const avgUtilization = dispatchPlan.reduce((sum, plan) => {
-      const planUtil = plan.trucks.reduce((tSum, truck) => tSum + ((truck.pallets / truck.capacity) * 100), 0) / plan.trucks.length;
-      return sum + (planUtil || 0);
-    }, 0) / dispatchPlan.length;
+    // Calculate average utilization across all dispatches - fix 0% utilization issue
+    const avgUtilization = this.calculateDispatchPlanUtilization(dispatchPlan, totalPallets);
     
     const totalCostWithPenalties = totalCost + totalPenalty;
     
@@ -337,7 +337,7 @@ class ConsolidationService {
       waitTime: waitDays,
       totalPalletsOnDate: totalPallets,
       truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
-      utilization: palletRecommendation.utilization || 0,
+      utilization: actualUtilization,
       estimatedCost: truckCost,
       penaltyCost,
       totalCostWithPenalties,
@@ -1256,6 +1256,96 @@ class ConsolidationService {
     score += utilizationBonus;
     
     return Math.max(0, score);
+  }
+
+  // Helper function to calculate actual truck utilization - fixes 0% utilization issue
+  calculateActualUtilization(palletRecommendation, totalPallets) {
+    // First try to get from recommendation
+    if (palletRecommendation.utilization && palletRecommendation.utilization > 0) {
+      return Math.round(palletRecommendation.utilization);
+    }
+    
+    // Fallback: calculate from truck configuration
+    if (palletRecommendation.allOptions && palletRecommendation.allOptions.length > 0) {
+      const bestOption = palletRecommendation.allOptions[0];
+      if (bestOption.trucks && bestOption.trucks.length > 0) {
+        // Calculate average utilization across all trucks
+        const totalCapacity = bestOption.trucks.reduce((sum, truck) => sum + (truck.capacity || truck.spec?.maxPallets || 10), 0);
+        const actualPallets = bestOption.trucks.reduce((sum, truck) => sum + truck.pallets, 0);
+        return Math.round((actualPallets / totalCapacity) * 100);
+      }
+      
+      // Use overall utilization from best option
+      if (bestOption.utilization && bestOption.utilization.overall > 0) {
+        return Math.round(bestOption.utilization.overall);
+      }
+    }
+    
+    // Final fallback: estimate based on truck types
+    const trucks = palletRecommendation.allOptions?.[0]?.trucks || [];
+    if (trucks.length > 0) {
+      let totalUtilization = 0;
+      trucks.forEach(truck => {
+        const capacity = this.getTruckCapacity(truck.type);
+        const utilization = (truck.pallets / capacity) * 100;
+        totalUtilization += utilization;
+      });
+      return Math.round(totalUtilization / trucks.length);
+    }
+    
+    // Last resort: conservative estimate
+    return Math.min(95, Math.round((totalPallets / this.estimateRequiredCapacity(totalPallets)) * 100));
+  }
+
+  // Helper to get truck capacity by type
+  getTruckCapacity(truckType) {
+    const capacities = {
+      'HR': 2,
+      'MR': 10, 
+      'SEMI': 22,
+      'B_DOUBLE': 36,
+      'B-Double': 36
+    };
+    return capacities[truckType] || 10;
+  }
+  
+  // Helper to estimate required capacity for fallback calculation
+  estimateRequiredCapacity(totalPallets) {
+    if (totalPallets <= 2) return 2;      // HR
+    if (totalPallets <= 10) return 10;    // MR
+    if (totalPallets <= 22) return 22;    // Semi
+    return Math.ceil(totalPallets / 36) * 36; // B-Double(s)
+  }
+
+  // Calculate utilization for dispatch plan - fixes 0% issue
+  calculateDispatchPlanUtilization(dispatchPlan, totalPallets) {
+    if (!dispatchPlan || dispatchPlan.length === 0) {
+      return Math.min(95, Math.round((totalPallets / this.estimateRequiredCapacity(totalPallets)) * 100));
+    }
+
+    let totalUtilization = 0;
+    let validPlans = 0;
+
+    dispatchPlan.forEach(plan => {
+      if (plan.trucks && plan.trucks.length > 0) {
+        let planUtilization = 0;
+        plan.trucks.forEach(truck => {
+          const capacity = truck.capacity || this.getTruckCapacity(truck.type);
+          if (capacity > 0) {
+            planUtilization += (truck.pallets / capacity) * 100;
+          }
+        });
+        totalUtilization += planUtilization / plan.trucks.length;
+        validPlans++;
+      }
+    });
+
+    if (validPlans > 0) {
+      return Math.round(totalUtilization / validPlans);
+    }
+
+    // Fallback calculation
+    return Math.min(95, Math.round((totalPallets / this.estimateRequiredCapacity(totalPallets)) * 100));
   }
 
   createPartialConsolidationScenarios(group) {
