@@ -792,14 +792,29 @@ class ConsolidationService {
   generateConsolidationScenarios(routeGroups) {
     const scenarios = [];
 
-    // Generate individual route scenarios
-    routeGroups.forEach(group => {
-      scenarios.push(...this.createAllDispatchScenarios(group));
+    // OPTION A: Individual route scenarios (each route optimized separately)
+    routeGroups.forEach((group, index) => {
+      const routeScenarios = this.createAllDispatchScenarios(group);
+      
+      // Mark these as individual route scenarios with clear naming
+      routeScenarios.forEach(scenario => {
+        scenario.routeIndex = index;
+        scenario.isIndividualRoute = true;
+        scenario.name = `Route ${index + 1}: ${scenario.name}`;
+        scenario.description = `${scenario.description} (${group.sourceCity} → ${group.destinationCity})`;
+      });
+      
+      scenarios.push(...routeScenarios);
     });
 
-    // Generate cross-route consolidation scenarios (handles ALL pallets)
+    // OPTION B: Cross-route consolidation scenarios (ALL pallets together)
     if (routeGroups.length > 1) {
       scenarios.push(...this.createCrossRouteConsolidationScenarios(routeGroups));
+    }
+
+    // OPTION C: Multi-route coordination scenarios (different trucks, different days)
+    if (routeGroups.length > 1) {
+      scenarios.push(...this.createMultiRouteCoordinationScenarios(routeGroups));
     }
 
     return scenarios;
@@ -847,6 +862,218 @@ class ConsolidationService {
     });
 
     return crossRouteScenarios;
+  }
+
+  // Create multi-route coordination scenarios (different trucks, different days, ensures ALL pallets handled)
+  createMultiRouteCoordinationScenarios(routeGroups) {
+    const scenarios = [];
+    const allOrders = routeGroups.flatMap(group => group.orders);
+    const totalPallets = allOrders.reduce((sum, order) => sum + order.standardEquivalent, 0);
+    
+    if (totalPallets === 0 || routeGroups.length === 0) return scenarios;
+
+    // Strategy 1: Parallel dispatch (all routes dispatched simultaneously on optimal dates)
+    scenarios.push(this.createParallelDispatchScenario(routeGroups, totalPallets));
+    
+    // Strategy 2: Sequential dispatch (routes dispatched in order of urgency/efficiency)
+    scenarios.push(this.createSequentialDispatchScenario(routeGroups, totalPallets));
+    
+    // Strategy 3: Deadline-driven dispatch (routes prioritized by delivery deadlines)
+    scenarios.push(this.createDeadlineDrivenDispatchScenario(routeGroups, totalPallets));
+
+    return scenarios.filter(scenario => scenario !== null);
+  }
+
+  // Parallel dispatch: All routes handled simultaneously
+  createParallelDispatchScenario(routeGroups, totalPallets) {
+    const today = moment();
+    const routeDispatchPlans = [];
+    let totalCost = 0;
+    let totalPenalty = 0;
+    let maxTime = 0;
+    
+    routeGroups.forEach((group, index) => {
+      const recommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+      const dispatchDate = group.earliestPickup || today;
+      const penalty = this.calculatePenaltyCost(group.orders, dispatchDate, 2);
+      
+      routeDispatchPlans.push({
+        routeIndex: index + 1,
+        route: `${group.sourceCity} → ${group.destinationCity}`,
+        date: dispatchDate.format('MMM DD'),
+        pallets: group.totalStandardPallets,
+        orders: group.orders.length,
+        trucks: recommendation.allOptions?.[0]?.trucks || [],
+        cost: recommendation.totalCost || 0,
+        penalty: penalty,
+        utilization: this.calculateActualUtilization(recommendation, group.totalStandardPallets)
+      });
+      
+      totalCost += recommendation.totalCost || 0;
+      totalPenalty += penalty;
+      maxTime = Math.max(maxTime, recommendation.totalTime || 20);
+    });
+
+    const totalCostWithPenalties = totalCost + totalPenalty;
+
+    return {
+      id: `parallel-dispatch-multi-route`,
+      type: 'parallel-coordination',
+      name: `Parallel Dispatch - ALL ${totalPallets} Pallets`,
+      description: `Simultaneous dispatch of ${routeGroups.length} routes using ${routeDispatchPlans.reduce((sum, p) => sum + p.trucks.length, 0)} trucks`,
+      routeDispatchPlans: routeDispatchPlans,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: routeDispatchPlans.flatMap(p => p.trucks),
+      utilization: Math.round(routeDispatchPlans.reduce((sum, p) => sum + p.utilization, 0) / routeDispatchPlans.length),
+      estimatedCost: totalCost,
+      penaltyCost: totalPenalty,
+      totalCostWithPenalties,
+      estimatedTime: maxTime,
+      isOnTime: totalPenalty === 0,
+      recommendations: [
+        `🚚 ${routeGroups.length} simultaneous routes with ${routeDispatchPlans.reduce((sum, p) => sum + p.trucks.length, 0)} trucks total`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)} (base: $${totalCost.toFixed(2)} + penalties: $${totalPenalty.toFixed(2)})`,
+        ...routeDispatchPlans.map(plan => `📍 Route ${plan.routeIndex}: ${plan.pallets} pallets (${plan.trucks.length} truck${plan.trucks.length !== 1 ? 's' : ''}) on ${plan.date}`),
+        totalPenalty === 0 ? `✅ All deliveries on time` : `⚠️ Some routes have penalties`
+      ],
+      isMultiRoute: true,
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, totalPenalty === 0, 
+        Math.round(routeDispatchPlans.reduce((sum, p) => sum + p.utilization, 0) / routeDispatchPlans.length), maxTime)
+    };
+  }
+
+  // Sequential dispatch: Routes handled in optimal sequence
+  createSequentialDispatchScenario(routeGroups, totalPallets) {
+    const today = moment();
+    const sortedGroups = [...routeGroups].sort((a, b) => {
+      // Sort by urgency and then by earliest pickup date
+      const urgencyDiff = b.urgentOrders - a.urgentOrders;
+      if (urgencyDiff !== 0) return urgencyDiff;
+      return a.earliestPickup.diff(b.earliestPickup);
+    });
+
+    const sequentialPlans = [];
+    let totalCost = 0;
+    let totalPenalty = 0;
+    let currentDate = today;
+    
+    sortedGroups.forEach((group, index) => {
+      const recommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+      const dispatchDate = moment.max(currentDate, group.earliestPickup);
+      const penalty = this.calculatePenaltyCost(group.orders, dispatchDate, 2);
+      
+      sequentialPlans.push({
+        day: index + 1,
+        route: `${group.sourceCity} → ${group.destinationCity}`,
+        date: dispatchDate.format('MMM DD'),
+        pallets: group.totalStandardPallets,
+        orders: group.orders.length,
+        trucks: recommendation.allOptions?.[0]?.trucks || [],
+        cost: recommendation.totalCost || 0,
+        penalty: penalty,
+        utilization: this.calculateActualUtilization(recommendation, group.totalStandardPallets)
+      });
+      
+      totalCost += recommendation.totalCost || 0;
+      totalPenalty += penalty;
+      currentDate = dispatchDate.clone().add(1, 'day'); // Next route dispatches next day
+    });
+
+    const totalCostWithPenalties = totalCost + totalPenalty;
+    const avgTime = 18; // Sequential dispatch is more manageable
+
+    return {
+      id: `sequential-dispatch-multi-route`,
+      type: 'sequential-coordination', 
+      name: `Sequential Dispatch - ALL ${totalPallets} Pallets`,
+      description: `Staged dispatch over ${sequentialPlans.length} days for optimal resource management`,
+      sequentialDispatchPlans: sequentialPlans,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: sequentialPlans.flatMap(p => p.trucks),
+      utilization: Math.round(sequentialPlans.reduce((sum, p) => sum + p.utilization, 0) / sequentialPlans.length),
+      estimatedCost: totalCost,
+      penaltyCost: totalPenalty,
+      totalCostWithPenalties,
+      estimatedTime: avgTime,
+      isOnTime: totalPenalty === 0,
+      recommendations: [
+        `📅 ${sequentialPlans.length}-day sequential dispatch plan`,
+        `🚚 Total: ${sequentialPlans.reduce((sum, p) => sum + p.trucks.length, 0)} trucks across all days`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)}`,
+        ...sequentialPlans.map(plan => `Day ${plan.day}: ${plan.pallets} pallets to ${plan.route.split(' → ')[1]} on ${plan.date}`),
+        `⚡ Reduced loading dock congestion with staged dispatch`
+      ],
+      isMultiRoute: true,
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, totalPenalty === 0, 
+        Math.round(sequentialPlans.reduce((sum, p) => sum + p.utilization, 0) / sequentialPlans.length), avgTime)
+    };
+  }
+
+  // Deadline-driven dispatch: Prioritized by delivery deadlines
+  createDeadlineDrivenDispatchScenario(routeGroups, totalPallets) {
+    const today = moment();
+    const sortedGroups = [...routeGroups].sort((a, b) => {
+      // Sort by earliest delivery deadline
+      return a.latestDelivery.diff(b.latestDelivery);
+    });
+
+    const deadlinePlans = [];
+    let totalCost = 0;
+    let totalPenalty = 0;
+    
+    sortedGroups.forEach((group, index) => {
+      const recommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+      // Dispatch to meet the deadline (2 days transit time)
+      const requiredDispatchDate = group.latestDelivery.clone().subtract(2, 'days');
+      const dispatchDate = moment.max(requiredDispatchDate, group.earliestPickup, today);
+      const penalty = this.calculatePenaltyCost(group.orders, dispatchDate, 2);
+      
+      deadlinePlans.push({
+        priority: index + 1,
+        route: `${group.sourceCity} → ${group.destinationCity}`,
+        date: dispatchDate.format('MMM DD'),
+        deadline: group.latestDelivery.format('MMM DD'),
+        pallets: group.totalStandardPallets,
+        orders: group.orders.length,
+        trucks: recommendation.allOptions?.[0]?.trucks || [],
+        cost: recommendation.totalCost || 0,
+        penalty: penalty,
+        isUrgent: group.urgentOrders > 0,
+        utilization: this.calculateActualUtilization(recommendation, group.totalStandardPallets)
+      });
+      
+      totalCost += recommendation.totalCost || 0;
+      totalPenalty += penalty;
+    });
+
+    const totalCostWithPenalties = totalCost + totalPenalty;
+    const avgTime = 20;
+
+    return {
+      id: `deadline-driven-multi-route`,
+      type: 'deadline-coordination',
+      name: `Deadline-Driven Dispatch - ALL ${totalPallets} Pallets`,
+      description: `Priority dispatch based on delivery deadlines to minimize penalties`,
+      deadlineDispatchPlans: deadlinePlans,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: deadlinePlans.flatMap(p => p.trucks),
+      utilization: Math.round(deadlinePlans.reduce((sum, p) => sum + p.utilization, 0) / deadlinePlans.length),
+      estimatedCost: totalCost,
+      penaltyCost: totalPenalty,
+      totalCostWithPenalties,
+      estimatedTime: avgTime,
+      isOnTime: totalPenalty === 0,
+      recommendations: [
+        `🎯 Deadline-optimized dispatch sequence`,
+        `⏰ Priority order: ${deadlinePlans.map(p => `${p.route.split(' → ')[1]} (${p.deadline})`).join(' → ')}`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)} with ${totalPenalty === 0 ? 'no' : '$' + totalPenalty.toFixed(2)} penalties`,
+        ...deadlinePlans.map(plan => `Priority ${plan.priority}: ${plan.pallets} pallets by ${plan.deadline}${plan.isUrgent ? ' (URGENT)' : ''}`),
+        totalPenalty === 0 ? `✅ All deadlines met` : `⚠️ Optimized penalty management`
+      ],
+      isMultiRoute: true,
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, totalPenalty === 0, 
+        Math.round(deadlinePlans.reduce((sum, p) => sum + p.utilization, 0) / deadlinePlans.length), avgTime)
+    };
   }
 
   // Legacy immediate scenario function - replaced by createAllDispatchScenarios
