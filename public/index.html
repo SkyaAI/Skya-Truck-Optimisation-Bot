@@ -530,7 +530,7 @@
                     <!-- Key Metrics -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                         <div class="text-center bg-white rounded-lg p-3">
-                            <div class="text-xl font-bold text-green-600">$${scenario.estimatedCost?.toLocaleString() || 'TBD'}</div>
+                            <div class="text-xl font-bold text-green-600">$${scenario.totalCostWithPenalties?.toLocaleString() || scenario.estimatedCost?.toLocaleString() || 'TBD'}</div>
                             <div class="text-sm text-gray-600">Total Cost</div>
                         </div>
                         <div class="text-center bg-white rounded-lg p-3">
@@ -559,34 +559,32 @@
                                     </div>
                                     <div class="text-right">
                                         <div class="font-medium">${truck.pallets} pallets</div>
-                                        <div class="text-sm text-gray-600">${Math.round((truck.pallets/truck.capacity)*100)}% capacity</div>
+                                        <div class="text-sm text-gray-600">${truck.capacity ? Math.round((truck.pallets/truck.capacity)*100) + '%' : 'Full'} capacity</div>
                                     </div>
                                 </div>
                             `).join('') || '<p class="text-gray-500 text-center py-4">Truck configuration pending</p>'}
                         </div>
                     </div>
 
-                    <!-- Truck Companies -->
-                    ${scenario.truckCompanies?.length > 0 ? `
+                    <!-- Weekly Dispatch Plan (if available) -->
+                    ${scenario.dispatchPlan ? `
                         <div class="mb-6">
-                            <h4 class="font-semibold text-gray-900 mb-3">Recommended Truck Companies</h4>
+                            <h4 class="font-semibold text-gray-900 mb-3">📅 Weekly Dispatch Schedule</h4>
                             <div class="space-y-3">
-                                ${scenario.truckCompanies.slice(0, 3).map(company => `
-                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                ${scenario.dispatchPlan.map((plan, index) => `
+                                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                                         <div class="flex justify-between items-start mb-2">
                                             <div>
-                                                <div class="font-semibold text-gray-900">${company.companyName}</div>
-                                                <div class="text-sm text-gray-600">${company.contact.phone}</div>
+                                                <div class="font-semibold text-gray-900">Day ${index + 1}: ${plan.date}</div>
+                                                <div class="text-sm text-gray-600">${plan.orders} order(s) • ${plan.pallets} pallets</div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="font-semibold text-green-600">$${company.estimatedCost?.toLocaleString() || 'Quote'}</div>
-                                                <div class="text-sm text-gray-600">${company.estimatedTime || 'TBD'}h</div>
+                                                <div class="font-semibold text-green-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
+                                                <div class="text-sm text-gray-600">${plan.trucks.length} truck(s)</div>
                                             </div>
                                         </div>
-                                        <div class="text-xs text-gray-500 mb-2">${company.recommendation}</div>
-                                        <div class="flex items-center space-x-2 text-xs">
-                                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">Reliability: ${company.reliability}/10</span>
-                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded">Cost: ${company.costRating}/10</span>
+                                        <div class="text-xs text-gray-600">
+                                            Trucks: ${plan.trucks.map(t => `${t.pallets}/${t.capacity} ${getTruckTypeName(t.type)}`).join(', ')}
                                         </div>
                                     </div>
                                 `).join('')}
@@ -626,20 +624,14 @@
                         </div>
                     ` : ''}
 
-                    <!-- Action Buttons -->
-                    <div class="text-center space-y-3">
-                        <button onclick="selectScenario('${scenario.id}')" 
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg">
-                            🚚 Select This Scenario & Book Trucks
-                        </button>
-                        
-                        ${scenario.truckCompanies?.length > 0 ? `
-                            <div class="text-sm text-gray-600 mb-2">Quick Book with Top Carrier:</div>
-                            <button onclick="directBookWebsite('${scenario.truckCompanies[0].companyCode}', '${scenario.truckCompanies[0].contact.bookingUrl || ''}', '${scenario.truckCompanies[0].companyName}')"
-                                    class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg text-sm">
-                                🌐 Book ${scenario.truckCompanies[0].companyName} Online
-                            </button>
-                        ` : ''}
+                    <!-- Scenario Summary -->
+                    <div class="text-center bg-gray-50 rounded-lg p-4">
+                        <div class="text-sm font-medium text-gray-700">Decision Factors</div>
+                        <div class="text-xs text-gray-600 mt-2">
+                            Cost Priority: ${scenario.totalCostWithPenalties ? `$${scenario.totalCostWithPenalties.toFixed(2)}` : 'Calculating...'} • 
+                            Time Priority: ${scenario.estimatedTime || 'TBD'}h • 
+                            Utilization: ${scenario.utilization || 0}%
+                        </div>
                     </div>
                 </div>
             `;

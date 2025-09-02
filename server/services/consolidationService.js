@@ -150,19 +150,295 @@ class ConsolidationService {
     return { critical, warning, safe, total: orders.length };
   }
 
-  // Create deadline-optimized dispatch scenarios with penalty cost analysis
+  // Create comprehensive weekly dispatch schedule showing ALL pallets
   createAllDispatchScenarios(group) {
     const scenarios = [];
     const today = moment();
-    const transitTime = 2; // Assume 2 days transit time
+    const transitTime = 2;
     
-    // Generate multiple dispatch strategies
-    scenarios.push(...this.createDeadlineOptimizedScenarios(group));
-    scenarios.push(...this.createConsolidationScenarios(group));
-    scenarios.push(...this.createAlternativeTruckConfigurations(group));
+    // Create comprehensive weekly schedule scenarios (handles ALL pallets)
+    scenarios.push(...this.createCompleteWeeklySchedule(group));
+    
+    // Add alternative configurations for comparison
+    scenarios.push(...this.createAlternativeScheduleConfigurations(group));
     
     // Sort by score (prioritizing cost efficiency, then time, then utilization)
     return scenarios.sort((a, b) => (b.score || 0) - (a.score || 0));
+  }
+
+  // Create complete weekly schedule showing how to dispatch ALL pallets
+  createCompleteWeeklySchedule(group) {
+    const scenarios = [];
+    const today = moment();
+    const transitTime = 2;
+    const totalPallets = group.orders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+    
+    // Strategy 1: Dispatch all pallets as soon as stock is available (fastest)
+    const immediateDispatchScenario = this.createImmediateDispatchSchedule(group, totalPallets);
+    if (immediateDispatchScenario) scenarios.push(immediateDispatchScenario);
+    
+    // Strategy 2: Optimized dispatch based on delivery deadlines
+    const optimizedDispatchScenario = this.createOptimizedDispatchSchedule(group, totalPallets);
+    if (optimizedDispatchScenario) scenarios.push(optimizedDispatchScenario);
+    
+    // Strategy 3: Cost-minimized dispatch (may have some delays)
+    const costMinimizedScenario = this.createCostMinimizedSchedule(group, totalPallets);
+    if (costMinimizedScenario) scenarios.push(costMinimizedScenario);
+    
+    return scenarios;
+  }
+
+  // Strategy 1: Dispatch ALL pallets immediately when stock available
+  createImmediateDispatchSchedule(group, totalPallets) {
+    const today = moment();
+    const transitTime = 2;
+    
+    // Find the earliest date when ALL orders have stock available
+    const allStockAvailableDate = group.orders.reduce((latest, order) => {
+      return moment.max(latest, order.pickupDate);
+    }, today);
+    
+    // Calculate costs for immediate dispatch of ALL pallets
+    const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+    const truckCost = palletRecommendation.totalCost || 0;
+    const penaltyCost = this.calculatePenaltyCost(group.orders, allStockAvailableDate, transitTime);
+    const totalCostWithPenalties = truckCost + penaltyCost;
+    const waitDays = Math.max(0, allStockAvailableDate.diff(today, 'days'));
+    
+    return {
+      id: `immediate-all-${group.routeKey}`,
+      type: 'immediate-complete',
+      name: `Immediate Dispatch - ALL ${totalPallets} Pallets`,
+      description: `Dispatch all ${totalPallets} pallets on ${allStockAvailableDate.format('MMM DD')} when all stock is available`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchDate: allStockAvailableDate.format('YYYY-MM-DD'),
+      waitTime: waitDays,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
+      utilization: palletRecommendation.utilization || 0,
+      estimatedCost: truckCost,
+      penaltyCost,
+      totalCostWithPenalties,
+      estimatedTime: (palletRecommendation.totalTime || 0) + (waitDays * 24),
+      isOnTime: penaltyCost === 0,
+      delayDays: penaltyCost > 0 ? Math.ceil(penaltyCost / (totalPallets * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay)) : 0,
+      recommendations: [
+        `🚚 Complete shipment: ${totalPallets} pallets in ${palletRecommendation.allOptions?.[0]?.trucks?.length || 1} truck(s)`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)} (truck: $${truckCost.toFixed(2)} + penalties: $${penaltyCost.toFixed(2)})`,
+        `⏱️ Estimated time: ${(palletRecommendation.totalTime || 20)} hours`,
+        penaltyCost === 0 ? `✅ All deliveries on time` : `⚠️ Some deliveries delayed by ${Math.ceil(penaltyCost / (totalPallets * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay))} day(s)`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [], // Remove truck companies as requested
+      palletOptimization: palletRecommendation,
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, penaltyCost === 0, palletRecommendation.utilization || 0, palletRecommendation.totalTime || 20)
+    };
+  }
+
+  // Strategy 2: Optimized dispatch based on delivery deadlines
+  createOptimizedDispatchSchedule(group, totalPallets) {
+    const today = moment();
+    const transitTime = 2;
+    
+    // Group orders by their delivery deadline requirements  
+    const ordersByDeadline = this.groupOrdersByDeliveryDeadline(group.orders, transitTime);
+    
+    // Create dispatch plan that balances deadlines and efficiency
+    const dispatchPlan = [];
+    let totalCost = 0;
+    let totalPenalty = 0;
+    let maxEstimatedTime = 0;
+    
+    ordersByDeadline.forEach((deadlineGroup, index) => {
+      const pallets = deadlineGroup.orders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+      const recommendation = palletOptimizationService.getBestTruckRecommendation(deadlineGroup.orders);
+      const penalty = this.calculatePenaltyCost(deadlineGroup.orders, deadlineGroup.dispatchDate, transitTime);
+      
+      dispatchPlan.push({
+        date: deadlineGroup.dispatchDate.format('MMM DD'),
+        pallets: pallets,
+        orders: deadlineGroup.orders.length,
+        trucks: recommendation.allOptions?.[0]?.trucks || [],
+        cost: recommendation.totalCost || 0,
+        penalty: penalty
+      });
+      
+      totalCost += recommendation.totalCost || 0;
+      totalPenalty += penalty;
+      maxEstimatedTime = Math.max(maxEstimatedTime, recommendation.totalTime || 20);
+    });
+    
+    // Calculate average utilization across all dispatches
+    const avgUtilization = dispatchPlan.reduce((sum, plan) => {
+      const planUtil = plan.trucks.reduce((tSum, truck) => tSum + ((truck.pallets / truck.capacity) * 100), 0) / plan.trucks.length;
+      return sum + (planUtil || 0);
+    }, 0) / dispatchPlan.length;
+    
+    const totalCostWithPenalties = totalCost + totalPenalty;
+    
+    return {
+      id: `optimized-schedule-${group.routeKey}`,
+      type: 'deadline-optimized',
+      name: `Optimized Weekly Schedule - ALL ${totalPallets} Pallets`,
+      description: `Smart dispatch plan across ${dispatchPlan.length} day(s) to meet delivery deadlines`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchPlan: dispatchPlan, // Weekly schedule breakdown
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: dispatchPlan.flatMap(p => p.trucks),
+      utilization: Math.round(avgUtilization),
+      estimatedCost: totalCost,
+      penaltyCost: totalPenalty,
+      totalCostWithPenalties,
+      estimatedTime: maxEstimatedTime,
+      isOnTime: totalPenalty === 0,
+      delayDays: totalPenalty > 0 ? Math.ceil(totalPenalty / (totalPallets * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay)) : 0,
+      recommendations: [
+        `📅 Weekly schedule: ${dispatchPlan.length} dispatch date(s)`,
+        `🚚 Total: ${totalPallets} pallets across ${dispatchPlan.flatMap(p => p.trucks).length} truck(s)`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)} (base: $${totalCost.toFixed(2)} + penalties: $${totalPenalty.toFixed(2)})`,
+        totalPenalty === 0 ? `✅ All deliveries meet deadlines` : `⚠️ ${totalPenalty > 0 ? 'Some delays' : 'All on time'}`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [], // Remove as requested
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, totalPenalty === 0, avgUtilization, maxEstimatedTime)
+    };
+  }
+
+  // Strategy 3: Cost-minimized schedule (may have delays but cheapest)
+  createCostMinimizedSchedule(group, totalPallets) {
+    const today = moment();
+    const transitTime = 2;
+    
+    // Wait for maximum consolidation opportunity (within limits)
+    const maxWaitDate = today.clone().add(CONSOLIDATION_RULES.maxWaitDays, 'days');
+    const latestStockDate = group.orders.reduce((latest, order) => {
+      return moment.max(latest, order.pickupDate);
+    }, today);
+    
+    const dispatchDate = moment.min(maxWaitDate, latestStockDate);
+    
+    // Calculate costs for maximum consolidation
+    const palletRecommendation = palletOptimizationService.getBestTruckRecommendation(group.orders);
+    const truckCost = palletRecommendation.totalCost || 0;
+    const penaltyCost = this.calculatePenaltyCost(group.orders, dispatchDate, transitTime);
+    const totalCostWithPenalties = truckCost + penaltyCost;
+    const waitDays = Math.max(0, dispatchDate.diff(today, 'days'));
+    
+    return {
+      id: `cost-minimized-${group.routeKey}`,
+      type: 'cost-optimized', 
+      name: `Cost Minimized - ALL ${totalPallets} Pallets`,
+      description: `Maximum consolidation dispatch on ${dispatchDate.format('MMM DD')} for lowest cost`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchDate: dispatchDate.format('YYYY-MM-DD'),
+      waitTime: waitDays,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: palletRecommendation.allOptions?.[0]?.trucks || [],
+      utilization: palletRecommendation.utilization || 0,
+      estimatedCost: truckCost,
+      penaltyCost,
+      totalCostWithPenalties,
+      estimatedTime: (palletRecommendation.totalTime || 0) + (waitDays * 24),
+      isOnTime: penaltyCost === 0,
+      delayDays: penaltyCost > 0 ? Math.ceil(penaltyCost / (totalPallets * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay)) : 0,
+      recommendations: [
+        `💰 Lowest total cost: $${totalCostWithPenalties.toFixed(2)}`,
+        `🚚 Maximum consolidation: ${totalPallets} pallets`,  
+        `📊 High utilization: ${palletRecommendation.utilization || 0}%`,
+        penaltyCost > 0 ? `⚠️ Trade-off: $${penaltyCost.toFixed(2)} penalty for ${Math.ceil(penaltyCost / (totalPallets * CONSOLIDATION_RULES.penaltyCostPerPalletPerDay))} day delay` : `✅ No delivery penalties`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [], // Remove as requested
+      palletOptimization: palletRecommendation,
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, penaltyCost === 0, palletRecommendation.utilization || 0, palletRecommendation.totalTime || 20)
+    };
+  }
+
+  // Create alternative schedule configurations for comparison
+  createAlternativeScheduleConfigurations(group) {
+    const scenarios = [];
+    const totalPallets = group.orders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+    
+    // Only create alternatives for substantial shipments
+    if (totalPallets < 20) return scenarios;
+    
+    // Alternative 1: Split into multiple smaller dispatches for speed
+    const speedOptimizedScenario = this.createSpeedOptimizedCompleteSchedule(group, totalPallets);
+    if (speedOptimizedScenario) scenarios.push(speedOptimizedScenario);
+    
+    return scenarios;
+  }
+
+  // Alternative: Multiple smaller dispatches for faster processing
+  createSpeedOptimizedCompleteSchedule(group, totalPallets) {
+    const today = moment();
+    const transitTime = 2;
+    
+    // Split orders into 2-3 smaller dispatches for faster loading/unloading
+    const maxPalletsPerDispatch = 20; // Optimal for MR trucks
+    const numDispatches = Math.ceil(totalPallets / maxPalletsPerDispatch);
+    
+    const dispatchPlan = [];
+    let totalCost = 0;
+    let totalPenalty = 0;
+    
+    // Create smaller dispatch groups
+    for (let i = 0; i < numDispatches; i++) {
+      const startIndex = i * Math.ceil(group.orders.length / numDispatches);
+      const endIndex = Math.min((i + 1) * Math.ceil(group.orders.length / numDispatches), group.orders.length);
+      const dispatchOrders = group.orders.slice(startIndex, endIndex);
+      const dispatchPallets = dispatchOrders.reduce((sum, o) => sum + o.standardEquivalent, 0);
+      
+      const dispatchDate = today.clone().add(i, 'days'); // Stagger dispatches
+      const recommendation = palletOptimizationService.getBestTruckRecommendation(dispatchOrders);
+      const penalty = this.calculatePenaltyCost(dispatchOrders, dispatchDate, transitTime);
+      
+      dispatchPlan.push({
+        date: dispatchDate.format('MMM DD'),
+        pallets: dispatchPallets,
+        orders: dispatchOrders.length,
+        trucks: recommendation.allOptions?.[0]?.trucks || [],
+        cost: recommendation.totalCost || 0,
+        penalty: penalty
+      });
+      
+      totalCost += recommendation.totalCost || 0;
+      totalPenalty += penalty;
+    }
+    
+    const totalCostWithPenalties = totalCost + totalPenalty;
+    const avgTime = 18; // Faster with multiple smaller trucks
+    
+    return {
+      id: `speed-optimized-${group.routeKey}`,
+      type: 'speed-optimized',
+      name: `Speed Optimized - ALL ${totalPallets} Pallets`,
+      description: `${numDispatches} smaller dispatches across consecutive days for faster processing`,
+      routeGroup: { ...group },
+      availableOrders: group.orders,
+      dispatchPlan: dispatchPlan,
+      totalPalletsOnDate: totalPallets,
+      truckConfiguration: dispatchPlan.flatMap(p => p.trucks),
+      utilization: 85, // Good utilization with smaller trucks
+      estimatedCost: totalCost,
+      penaltyCost: totalPenalty,
+      totalCostWithPenalties,
+      estimatedTime: avgTime,
+      isOnTime: totalPenalty === 0,
+      delayDays: 0,
+      recommendations: [
+        `⚡ Fastest processing: ${numDispatches} consecutive dispatches`,
+        `🚚 Efficient loading: Multiple smaller trucks`,
+        `💰 Total cost: $${totalCostWithPenalties.toFixed(2)}`,
+        `⏱️ Reduced waiting time at loading docks`
+      ],
+      deadlineRisk: this.assessDeadlineRisk(group.orders),
+      truckCompanies: [], // Remove as requested
+      score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, totalPenalty === 0, 85, avgTime)
+    };
   }
 
   // Create scenarios optimized for meeting delivery deadlines
