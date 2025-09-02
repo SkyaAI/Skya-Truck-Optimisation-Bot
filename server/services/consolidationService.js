@@ -1758,16 +1758,20 @@ class ConsolidationService {
       const recommendations = truckCompanyService.recommendCompanies(criteria);
       
       return recommendations.map(company => ({
-      ...company,
-      estimatedCost: Math.round(scenario.estimatedCost * company.estimatedCostMultiplier),
-      estimatedTime: Math.round(scenario.estimatedTime * company.estimatedTimeBonus * 10) / 10,
-      truckTypes: (scenario.truckConfiguration || []).map(truck => ({
-        type: truck.type,
-        quantity: 1,
-        pallets: truck.pallets,
-        bookingReference: `${company.companyCode}-${truck.type}-${Date.now()}`
-      }))
-    }));
+        ...company,
+        estimatedCost: Math.round(scenario.estimatedCost * company.estimatedCostMultiplier),
+        estimatedTime: Math.round(scenario.estimatedTime * company.estimatedTimeBonus * 10) / 10,
+        truckTypes: (scenario.truckConfiguration || []).map(truck => ({
+          type: truck.type,
+          quantity: 1,
+          pallets: truck.pallets,
+          bookingReference: `${company.companyCode}-${truck.type}-${Date.now()}`
+        }))
+      }));
+    } catch (error) {
+      console.error('Error recommending truck companies:', error);
+      return []; // Return empty array on error
+    }
   }
 
   calculateScenarioScore(scenario) {
