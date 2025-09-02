@@ -619,27 +619,28 @@ class ConsolidationService {
 
   // Calculate score prioritizing BUSINESS VALUE: Cost → Time → Utilization
   calculateDeadlineOptimizedScore(totalCost, isOnTime, utilization, estimatedTime = 20) {
-    let score = 1000; // Start with higher base for better precision
+    let score = 0; // Start fresh
     
-    // 1. COST (50% of score) - Most important for business
-    // Lower cost = higher score (inverse relationship)
-    const costScore = Math.max(0, 500 - (totalCost / 20)); // Heavily weight cost
-    score = costScore;
+    // 1. COST (70% of score) - HIGHEST PRIORITY for business
+    // Use exponential inverse scoring: cheaper costs get exponentially higher scores
+    const baseCost = 5000; // Reference cost
+    const costScore = Math.max(0, 700 * Math.exp(-(totalCost - baseCost) / 3000)); // Exponential decay for cost
+    score += costScore;
     
-    // 2. TIME (30% of score) - Second most important
-    // Lower time = higher score 
-    const timeScore = Math.max(0, 300 - (estimatedTime * 10)); // Weight time significantly
+    // 2. TIME (20% of score) - Second priority 
+    // Lower time = higher score with reasonable scaling
+    const timeScore = Math.max(0, 200 - (estimatedTime * 5)); // Less aggressive time penalty
     score += timeScore;
     
-    // 3. ON-TIME DELIVERY (20% of score) - Critical but already factored in cost via penalties
+    // 3. ON-TIME DELIVERY (8% of score) - Important but cost-adjusted
     if (isOnTime) {
-      score += 200; // Major bonus for on-time
+      score += 80; // Moderate bonus for on-time
     } else {
-      score -= 100; // Penalty for late delivery
+      score -= 40; // Moderate penalty for late delivery
     }
     
-    // 4. UTILIZATION (Minor bonus only) - Least important for business value
-    const utilizationBonus = Math.min(50, utilization / 2); // Cap utilization bonus
+    // 4. UTILIZATION (2% of score) - MINIMAL impact on business value
+    const utilizationBonus = Math.min(20, utilization / 5); // Very small utilization bonus
     score += utilizationBonus;
     
     return Math.max(0, score);
@@ -971,25 +972,26 @@ class ConsolidationService {
 
   // Calculate score for consolidation scenarios - Business Value Priority: Cost → Time → Utilization
   calculateConsolidationScore(totalCost, waitDays, utilization, delayDays, estimatedTime = 20) {
-    let score = 1000; // Higher base for precision
+    let score = 0; // Start fresh
     
-    // 1. COST EFFICIENCY (60% of score) - Primary business concern
-    // Normalize cost score: lower cost = higher score
-    const costScore = Math.max(0, 600 - (totalCost / 15)); // Major weight on cost
-    score = costScore;
+    // 1. COST EFFICIENCY (75% of score) - HIGHEST PRIORITY
+    // Use exponential inverse scoring for dramatic cost preference
+    const baseCost = 5000; // Reference cost
+    const costScore = Math.max(0, 750 * Math.exp(-(totalCost - baseCost) / 3000)); // Exponential cost preference
+    score += costScore;
     
-    // 2. TIME EFFICIENCY (25% of score) - Secondary business concern  
-    // Penalize wait time and delivery delays heavily
-    const timeScore = 250 - (waitDays * 50) - (delayDays * 100) - ((estimatedTime - 15) * 5);
-    score += Math.max(0, timeScore);
+    // 2. TIME EFFICIENCY (20% of score) - Secondary priority
+    // Penalize wait time and delivery delays, but less aggressively than cost
+    const timeScore = Math.max(0, 200 - (waitDays * 25) - (delayDays * 50) - ((estimatedTime - 15) * 3));
+    score += timeScore;
     
-    // 3. ON-TIME DELIVERY BONUS (10% of score)
+    // 3. ON-TIME DELIVERY BONUS (3% of score)
     if (delayDays === 0) {
-      score += 100; // Significant on-time bonus
+      score += 30; // Smaller on-time bonus
     }
     
-    // 4. UTILIZATION (5% of score) - Minor consideration
-    const utilizationBonus = Math.min(50, utilization / 2); // Capped utilization bonus
+    // 4. UTILIZATION (2% of score) - MINIMAL consideration
+    const utilizationBonus = Math.min(20, utilization / 5); // Very small utilization bonus
     score += utilizationBonus;
     
     return Math.max(0, score);
@@ -1229,26 +1231,28 @@ class ConsolidationService {
   }
 
   calculateAlternativeScore(totalCost, utilization, delayDays, type, estimatedTime = 18) {
-    let score = 1000; // Higher base for consistency
+    let score = 0; // Start fresh
     
-    // 1. COST EFFICIENCY (70% of score) - Primary business value
-    const costScore = Math.max(0, 700 - (totalCost / 12));
-    score = costScore;
+    // 1. COST EFFICIENCY (80% of score) - ABSOLUTE PRIORITY for business value
+    // Exponential cost preference - dramatic difference for cost savings
+    const baseCost = 5000; // Reference cost
+    const costScore = Math.max(0, 800 * Math.exp(-(totalCost - baseCost) / 3000)); // Exponential cost preference
+    score += costScore;
     
-    // 2. TIME EFFICIENCY (20% of score) - Secondary business value
-    const timeScore = Math.max(0, 200 - (estimatedTime * 8) - (delayDays * 150));
+    // 2. TIME EFFICIENCY (15% of score) - Secondary business value
+    const timeScore = Math.max(0, 150 - (estimatedTime * 5) - (delayDays * 75));
     score += timeScore;
     
-    // 3. TYPE-SPECIFIC BUSINESS BONUSES (7% of score)
-    if (type === 'speed' && estimatedTime <= 16) score += 50; // Speed bonus for fast delivery
-    if (type === 'efficiency' && totalCost <= 6000) score += 40; // Cost bonus for efficiency
-    if (type === 'balanced' && utilization >= 70 && totalCost <= 7000) score += 45; // Balanced bonus
+    // 3. TYPE-SPECIFIC BUSINESS BONUSES (3% of score)
+    if (type === 'speed' && estimatedTime <= 16) score += 20; // Smaller speed bonus
+    if (type === 'efficiency' && totalCost <= 6000) score += 25; // Cost bonus for efficiency
+    if (type === 'balanced' && utilization >= 70 && totalCost <= 7000) score += 15; // Smaller balanced bonus
     
-    // 4. ON-TIME DELIVERY (3% of score)
-    if (delayDays === 0) score += 30;
+    // 4. ON-TIME DELIVERY (1% of score)  
+    if (delayDays === 0) score += 10; // Very small on-time bonus
     
-    // 5. UTILIZATION (Minor consideration - no longer primary)
-    const utilizationBonus = Math.min(20, utilization / 5); // Much smaller utilization impact
+    // 5. UTILIZATION (1% of score) - MINIMAL consideration
+    const utilizationBonus = Math.min(10, utilization / 10); // Tiny utilization impact
     score += utilizationBonus;
     
     return Math.max(0, score);
