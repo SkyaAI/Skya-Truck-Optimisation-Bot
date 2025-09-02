@@ -161,8 +161,8 @@ class ConsolidationService {
     scenarios.push(...this.createConsolidationScenarios(group));
     scenarios.push(...this.createAlternativeTruckConfigurations(group));
     
-    // Sort by total cost (truck cost + penalty cost)
-    return scenarios.sort((a, b) => a.totalCostWithPenalties - b.totalCostWithPenalties);
+    // Sort by score (prioritizing cost efficiency, then time, then utilization)
+    return scenarios.sort((a, b) => (b.score || 0) - (a.score || 0));
   }
 
   // Create scenarios optimized for meeting delivery deadlines
@@ -243,7 +243,7 @@ class ConsolidationService {
         deadlineRisk: this.assessDeadlineRisk(orders),
         truckCompanies: [],
         palletOptimization: palletRecommendation,
-        score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, isOnTime, utilization)
+        score: this.calculateDeadlineOptimizedScore(totalCostWithPenalties, isOnTime, utilization, palletRecommendation.totalTime || 20)
       };
       
       scenarios.push(scenario);
@@ -341,18 +341,30 @@ class ConsolidationService {
     return maxDelayDays;
   }
 
-  // Calculate score prioritizing total cost (truck + penalties)
-  calculateDeadlineOptimizedScore(totalCost, isOnTime, utilization) {
-    let score = 100; // Start with base score
+  // Calculate score prioritizing BUSINESS VALUE: Cost → Time → Utilization
+  calculateDeadlineOptimizedScore(totalCost, isOnTime, utilization, estimatedTime = 20) {
+    let score = 1000; // Start with higher base for better precision
     
-    // Prioritize on-time delivery
-    if (isOnTime) score += 50;
+    // 1. COST (50% of score) - Most important for business
+    // Lower cost = higher score (inverse relationship)
+    const costScore = Math.max(0, 500 - (totalCost / 20)); // Heavily weight cost
+    score = costScore;
     
-    // Prefer lower total costs
-    score -= totalCost / 100; // Reduce score by cost/100
+    // 2. TIME (30% of score) - Second most important
+    // Lower time = higher score 
+    const timeScore = Math.max(0, 300 - (estimatedTime * 10)); // Weight time significantly
+    score += timeScore;
     
-    // Bonus for good utilization
-    score += utilization / 10;
+    // 3. ON-TIME DELIVERY (20% of score) - Critical but already factored in cost via penalties
+    if (isOnTime) {
+      score += 200; // Major bonus for on-time
+    } else {
+      score -= 100; // Penalty for late delivery
+    }
+    
+    // 4. UTILIZATION (Minor bonus only) - Least important for business value
+    const utilizationBonus = Math.min(50, utilization / 2); // Cap utilization bonus
+    score += utilizationBonus;
     
     return Math.max(0, score);
   }
@@ -612,7 +624,7 @@ class ConsolidationService {
         deadlineRisk,
         truckCompanies: [],
         palletOptimization: palletRecommendation,
-        score: this.calculateConsolidationScore(totalCostWithPenalties, waitDays, utilization, delayDays),
+        score: this.calculateConsolidationScore(totalCostWithPenalties, waitDays, utilization, delayDays, palletRecommendation.totalTime || 20),
         aiDecision: this.makeConsolidationAIDecision({
           totalCost: totalCostWithPenalties,
           waitDays,
@@ -681,24 +693,28 @@ class ConsolidationService {
     };
   }
 
-  // Calculate score for consolidation scenarios
-  calculateConsolidationScore(totalCost, waitDays, utilization, delayDays) {
-    let score = 100; // Base score
+  // Calculate score for consolidation scenarios - Business Value Priority: Cost → Time → Utilization
+  calculateConsolidationScore(totalCost, waitDays, utilization, delayDays, estimatedTime = 20) {
+    let score = 1000; // Higher base for precision
     
-    // Cost efficiency (lower cost = higher score)
-    score -= totalCost / 100;
+    // 1. COST EFFICIENCY (60% of score) - Primary business concern
+    // Normalize cost score: lower cost = higher score
+    const costScore = Math.max(0, 600 - (totalCost / 15)); // Major weight on cost
+    score = costScore;
     
-    // Utilization bonus
-    score += utilization / 2;
+    // 2. TIME EFFICIENCY (25% of score) - Secondary business concern  
+    // Penalize wait time and delivery delays heavily
+    const timeScore = 250 - (waitDays * 50) - (delayDays * 100) - ((estimatedTime - 15) * 5);
+    score += Math.max(0, timeScore);
     
-    // Wait time penalty
-    score -= waitDays * 10;
+    // 3. ON-TIME DELIVERY BONUS (10% of score)
+    if (delayDays === 0) {
+      score += 100; // Significant on-time bonus
+    }
     
-    // Delay penalty (severe)
-    score -= delayDays * 25;
-    
-    // On-time bonus
-    if (delayDays === 0) score += 20;
+    // 4. UTILIZATION (5% of score) - Minor consideration
+    const utilizationBonus = Math.min(50, utilization / 2); // Capped utilization bonus
+    score += utilizationBonus;
     
     return Math.max(0, score);
   }
@@ -790,7 +806,7 @@ class ConsolidationService {
       ],
       deadlineRisk: this.assessDeadlineRisk(group.orders),
       truckCompanies: [],
-      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'efficiency')
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'efficiency', 16 + (bDoublesNeeded * 2))
     };
   }
 
@@ -848,7 +864,7 @@ class ConsolidationService {
       ],
       deadlineRisk: this.assessDeadlineRisk(group.orders),
       truckCompanies: [],
-      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'speed')
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'speed', 14 + (mrTrucksNeeded * 1.5))
     };
   }
 
@@ -932,26 +948,32 @@ class ConsolidationService {
       ],
       deadlineRisk: this.assessDeadlineRisk(group.orders),
       truckCompanies: [],
-      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'balanced')
+      score: this.calculateAlternativeScore(totalCostWithPenalties, avgUtilization, delayDays, 'balanced', 18 + (truckConfiguration.length * 1.5))
     };
   }
 
-  calculateAlternativeScore(totalCost, utilization, delayDays, type) {
-    let score = 100;
+  calculateAlternativeScore(totalCost, utilization, delayDays, type, estimatedTime = 18) {
+    let score = 1000; // Higher base for consistency
     
-    // Cost efficiency
-    score -= totalCost / 200;
+    // 1. COST EFFICIENCY (70% of score) - Primary business value
+    const costScore = Math.max(0, 700 - (totalCost / 12));
+    score = costScore;
     
-    // Utilization bonus
-    score += utilization / 3;
+    // 2. TIME EFFICIENCY (20% of score) - Secondary business value
+    const timeScore = Math.max(0, 200 - (estimatedTime * 8) - (delayDays * 150));
+    score += timeScore;
     
-    // Delay penalty
-    score -= delayDays * 30;
+    // 3. TYPE-SPECIFIC BUSINESS BONUSES (7% of score)
+    if (type === 'speed' && estimatedTime <= 16) score += 50; // Speed bonus for fast delivery
+    if (type === 'efficiency' && totalCost <= 6000) score += 40; // Cost bonus for efficiency
+    if (type === 'balanced' && utilization >= 70 && totalCost <= 7000) score += 45; // Balanced bonus
     
-    // Type-specific bonuses
-    if (type === 'efficiency' && utilization >= 70) score += 15;
-    if (type === 'speed' && delayDays === 0) score += 20;
-    if (type === 'balanced') score += 10;
+    // 4. ON-TIME DELIVERY (3% of score)
+    if (delayDays === 0) score += 30;
+    
+    // 5. UTILIZATION (Minor consideration - no longer primary)
+    const utilizationBonus = Math.min(20, utilization / 5); // Much smaller utilization impact
+    score += utilizationBonus;
     
     return Math.max(0, score);
   }
