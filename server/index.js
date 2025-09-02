@@ -38,6 +38,26 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // API Routes
+// Health check endpoint for Vercel deployment
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Skya Truck Optimization Bot API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Simple test endpoint for debugging
+app.post('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working',
+    received: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.post('/api/optimize-route', async (req, res) => {
   try {
     const orderData = req.body;
@@ -145,8 +165,16 @@ app.post('/api/consolidate-orders', async (req, res) => {
     });
   } catch (error) {
     console.error('Consolidation analysis error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    
     res.status(500).json({
       error: 'Failed to analyze consolidation options',
+      debug: {
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      },
       message: error.message
     });
   }

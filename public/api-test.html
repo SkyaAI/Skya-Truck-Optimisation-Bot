@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Skya Truck Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Skya Truck Bot API Test</h1>
+    <p>Use this page to test if the API is working properly on Vercel deployment.</p>
+
+    <div class="test-section">
+        <h3>1. Health Check</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <div id="healthResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Simple API Test</h3>
+        <button onclick="testAPI()">Test Simple API</button>
+        <div id="apiResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Consolidation Test</h3>
+        <button onclick="testConsolidation()">Test Consolidation Service</button>
+        <div id="consolidationResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Testing...';
+            
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ <strong>Health Check PASSED</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ <strong>Health Check FAILED</strong><br>Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ <strong>Health Check ERROR</strong><br>${error.message}`;
+            }
+        }
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Testing...';
+            
+            try {
+                const response = await fetch('/api/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'data', timestamp: new Date().toISOString() })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ <strong>API Test PASSED</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ <strong>API Test FAILED</strong><br>Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ <strong>API Test ERROR</strong><br>${error.message}`;
+            }
+        }
+
+        async function testConsolidation() {
+            const resultDiv = document.getElementById('consolidationResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Testing...';
+            
+            const testOrders = [
+                {
+                    source: "Melbourne",
+                    destination: "Sydney", 
+                    pallets: 10,
+                    palletSize: "standard",
+                    pickupDate: "2024-12-05",
+                    deliveryDate: "2024-12-07",
+                    urgency: "standard"
+                }
+            ];
+            
+            try {
+                const response = await fetch('/api/consolidate-orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orders: testOrders })
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ <strong>Consolidation Test PASSED</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ <strong>Consolidation Test FAILED</strong><br>Status: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ <strong>Consolidation Test ERROR</strong><br>${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
