@@ -792,29 +792,18 @@ class ConsolidationService {
   generateConsolidationScenarios(routeGroups) {
     const scenarios = [];
 
-    // OPTION A: Individual route scenarios (each route optimized separately)
-    routeGroups.forEach((group, index) => {
-      const routeScenarios = this.createAllDispatchScenarios(group);
-      
-      // Mark these as individual route scenarios with clear naming
-      routeScenarios.forEach(scenario => {
-        scenario.routeIndex = index;
-        scenario.isIndividualRoute = true;
-        scenario.name = `Route ${index + 1}: ${scenario.name}`;
-        scenario.description = `${scenario.description} (${group.sourceCity} → ${group.destinationCity})`;
-      });
-      
-      scenarios.push(...routeScenarios);
-    });
-
-    // OPTION B: Cross-route consolidation scenarios (ALL pallets together)
+    // Focus only on comprehensive weekly scheduling that handles ALL pallets
     if (routeGroups.length > 1) {
+      // OPTION A: Cross-route consolidation scenarios (ALL pallets together)
       scenarios.push(...this.createCrossRouteConsolidationScenarios(routeGroups));
-    }
-
-    // OPTION C: Multi-route coordination scenarios (different trucks, different days)
-    if (routeGroups.length > 1) {
+      
+      // OPTION B: Multi-route coordination scenarios (comprehensive weekly dispatch plans)
       scenarios.push(...this.createMultiRouteCoordinationScenarios(routeGroups));
+    } else {
+      // Single route: create comprehensive weekly schedule
+      const group = routeGroups[0];
+      const weeklyScenarios = this.createComprehensiveWeeklySchedule(group);
+      scenarios.push(...weeklyScenarios);
     }
 
     return scenarios;
@@ -842,26 +831,52 @@ class ConsolidationService {
       latestDelivery: allOrders.reduce((latest, o) => !latest || o.deliveryDate.isAfter(latest) ? o.deliveryDate : latest, null)
     };
 
-    // Generate comprehensive scenarios for ALL pallets
-    const crossRouteScenarios = this.createAllDispatchScenarios(megaGroup);
+    // Generate ONE comprehensive weekly schedule for ALL pallets
+    const weeklySchedule = this.createOptimizedDispatchSchedule(megaGroup, totalPallets);
     
-    // Mark these as cross-route scenarios and update names
-    crossRouteScenarios.forEach(scenario => {
-      scenario.id = `cross-route-${scenario.id}`;
-      scenario.type = `multi-route-${scenario.type}`;
-      scenario.name = scenario.name.replace(/\d+ Pallets/, `ALL ${totalPallets} Pallets (Multi-Route)`);
-      scenario.description = `${scenario.description} - Consolidates ${routeGroups.length} different routes`;
-      scenario.isCrossRoute = true;
+    if (weeklySchedule) {
+      weeklySchedule.id = `cross-route-weekly-${totalPallets}`;
+      weeklySchedule.type = 'multi-route-weekly';
+      weeklySchedule.name = `Weekly Schedule - ALL ${totalPallets} Pallets (Multi-Route)`;
+      weeklySchedule.description = `Consolidated weekly dispatch for ${routeGroups.length} routes`;
+      weeklySchedule.isCrossRoute = true;
       
-      // Add route breakdown to recommendations
+      // Add route breakdown to show which routes are consolidated
       const routeBreakdown = routeGroups.map(group => 
         `${group.orders.length} orders (${group.totalStandardPallets} pallets) to ${group.destinationCity}`
       ).join(', ');
       
-      scenario.recommendations.unshift(`🗺️ Multi-route consolidation: ${routeBreakdown}`);
-    });
+      weeklySchedule.recommendations.unshift(`🗺️ Multi-route consolidation: ${routeBreakdown}`);
+      
+      scenarios.push(weeklySchedule);
+    }
 
-    return crossRouteScenarios;
+    return scenarios;
+  }
+
+  // Create comprehensive weekly schedule for single route
+  createComprehensiveWeeklySchedule(group) {
+    const scenarios = [];
+    const allOrders = group.orders;
+    const totalPallets = allOrders.reduce((sum, order) => sum + order.standardEquivalent, 0);
+    
+    if (totalPallets === 0) return scenarios;
+
+    // Create weekly dispatch schedule optimized for ALL pallets
+    const weeklySchedule = this.createOptimizedDispatchSchedule(group, totalPallets);
+    
+    // Focus only on the best comprehensive schedule
+    if (weeklySchedule) {
+      weeklySchedule.id = `weekly-schedule-${group.routeKey}`;
+      weeklySchedule.type = 'weekly-schedule';
+      weeklySchedule.name = `Weekly Schedule - ${totalPallets} Pallets`;
+      weeklySchedule.description = `Optimized weekly dispatch plan for all ${totalPallets} pallets`;
+      weeklySchedule.isWeeklySchedule = true;
+      
+      scenarios.push(weeklySchedule);
+    }
+
+    return scenarios;
   }
 
   // Create multi-route coordination scenarios (different trucks, different days, ensures ALL pallets handled)
@@ -872,16 +887,19 @@ class ConsolidationService {
     
     if (totalPallets === 0 || routeGroups.length === 0) return scenarios;
 
-    // Strategy 1: Parallel dispatch (all routes dispatched simultaneously on optimal dates)
-    scenarios.push(this.createParallelDispatchScenario(routeGroups, totalPallets));
+    // Create ONE optimal multi-route coordination scenario (deadline-driven for best business value)
+    const optimalScenario = this.createDeadlineDrivenDispatchScenario(routeGroups, totalPallets);
     
-    // Strategy 2: Sequential dispatch (routes dispatched in order of urgency/efficiency)
-    scenarios.push(this.createSequentialDispatchScenario(routeGroups, totalPallets));
-    
-    // Strategy 3: Deadline-driven dispatch (routes prioritized by delivery deadlines)
-    scenarios.push(this.createDeadlineDrivenDispatchScenario(routeGroups, totalPallets));
+    if (optimalScenario) {
+      // Update the scenario to be clearly identified as the optimal weekly coordination
+      optimalScenario.id = `optimal-coordination-${totalPallets}`;
+      optimalScenario.name = `Optimal Weekly Coordination - ALL ${totalPallets} Pallets`;
+      optimalScenario.description = `Best multi-route dispatch plan balancing cost, deadlines, and efficiency`;
+      
+      scenarios.push(optimalScenario);
+    }
 
-    return scenarios.filter(scenario => scenario !== null);
+    return scenarios;
   }
 
   // Parallel dispatch: All routes handled simultaneously

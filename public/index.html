@@ -547,22 +547,20 @@
                         </div>
                     </div>
 
-                    <!-- Truck Configuration -->
+                    <!-- Weekly Schedule Summary -->
                     <div class="mb-6">
-                        <h4 class="font-semibold text-gray-900 mb-3">Truck Configuration</h4>
-                        <div class="space-y-2">
-                            ${scenario.truckConfiguration?.map(truck => `
-                                <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-                                    <div class="flex items-center space-x-3">
-                                        <i data-lucide="truck" class="h-5 w-5 text-gray-600"></i>
-                                        <span class="font-medium">${getTruckTypeName(truck.type)}</span>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="font-medium">${truck.pallets} pallets</div>
-                                        <div class="text-sm text-gray-600">${truck.capacity ? Math.round((truck.pallets/truck.capacity)*100) + '%' : 'Full'} capacity</div>
-                                    </div>
+                        <h4 class="font-semibold text-gray-900 mb-3">📅 Weekly Dispatch Schedule</h4>
+                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-semibold text-gray-900">Total: ${scenario.totalPalletsOnDate || 0} Pallets</div>
+                                    <div class="text-sm text-gray-600">${(scenario.availableOrders || []).length} orders • ${scenario.utilization || 0}% utilization</div>
                                 </div>
-                            `).join('') || '<p class="text-gray-500 text-center py-4">Truck configuration pending</p>'}
+                                <div class="text-right">
+                                    <div class="font-semibold text-green-600">$${scenario.totalCostWithPenalties?.toLocaleString() || scenario.estimatedCost?.toLocaleString() || 'TBD'}</div>
+                                    <div class="text-sm text-gray-600">${scenario.isOnTime ? '✅ On Time' : `⚠️ ${scenario.delayDays || 0}d late`}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -573,18 +571,20 @@
                             <div class="space-y-3">
                                 ${scenario.routeDispatchPlans.map(plan => `
                                     <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                                        <div class="flex justify-between items-start mb-2">
+                                        <div class="flex justify-between items-start">
                                             <div>
-                                                <div class="font-semibold text-gray-900">Route ${plan.routeIndex}: ${plan.route}</div>
-                                                <div class="text-sm text-gray-600">${plan.orders} order(s) • ${plan.pallets} pallets • ${plan.date}</div>
+                                                <div class="font-semibold text-gray-900">📅 ${plan.date} - ${plan.route}</div>
+                                                <div class="text-sm text-gray-600">
+                                                    <span class="inline-flex items-center mr-3">📦 ${plan.pallets} pallets</span>
+                                                    <span class="inline-flex items-center">📋 ${plan.orders} orders</span>
+                                                </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="font-semibold text-green-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
-                                                <div class="text-sm text-gray-600">${plan.utilization}% utilization</div>
+                                                <div class="font-semibold text-blue-600">
+                                                    🚚 ${plan.trucks.length > 0 ? plan.trucks.map(t => getTruckTypeName(t.type)).join(', ') : 'Standard Truck'}
+                                                </div>
+                                                <div class="text-sm text-gray-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
                                             </div>
-                                        </div>
-                                        <div class="text-xs text-gray-600">
-                                            ${plan.trucks.map(t => `${t.pallets} pallets in ${getTruckTypeName(t.type)}`).join(' + ')}
                                         </div>
                                     </div>
                                 `).join('')}
@@ -598,18 +598,20 @@
                             <div class="space-y-3">
                                 ${scenario.sequentialDispatchPlans.map(plan => `
                                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                        <div class="flex justify-between items-start mb-2">
+                                        <div class="flex justify-between items-start">
                                             <div>
-                                                <div class="font-semibold text-gray-900">Day ${plan.day}: ${plan.route}</div>
-                                                <div class="text-sm text-gray-600">${plan.orders} order(s) • ${plan.pallets} pallets • ${plan.date}</div>
+                                                <div class="font-semibold text-gray-900">📅 ${plan.date} - ${plan.route}</div>
+                                                <div class="text-sm text-gray-600">
+                                                    <span class="inline-flex items-center mr-3">📦 ${plan.pallets} pallets</span>
+                                                    <span class="inline-flex items-center">📋 ${plan.orders} orders</span>
+                                                </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="font-semibold text-green-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
-                                                <div class="text-sm text-gray-600">${plan.utilization}% utilization</div>
+                                                <div class="font-semibold text-blue-600">
+                                                    🚚 ${plan.trucks.length > 0 ? plan.trucks.map(t => getTruckTypeName(t.type)).join(', ') : 'Standard Truck'}
+                                                </div>
+                                                <div class="text-sm text-gray-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
                                             </div>
-                                        </div>
-                                        <div class="text-xs text-gray-600">
-                                            ${plan.trucks.map(t => `${t.pallets} pallets in ${getTruckTypeName(t.type)}`).join(' + ')}
                                         </div>
                                     </div>
                                 `).join('')}
@@ -623,18 +625,20 @@
                             <div class="space-y-3">
                                 ${scenario.deadlineDispatchPlans.map(plan => `
                                     <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                                        <div class="flex justify-between items-start mb-2">
+                                        <div class="flex justify-between items-start">
                                             <div>
-                                                <div class="font-semibold text-gray-900">Priority ${plan.priority}: ${plan.route} ${plan.isUrgent ? '🔥' : ''}</div>
-                                                <div class="text-sm text-gray-600">${plan.orders} order(s) • ${plan.pallets} pallets • Due: ${plan.deadline}</div>
+                                                <div class="font-semibold text-gray-900">📅 ${plan.date} - ${plan.route} ${plan.isUrgent ? '🔥' : ''}</div>
+                                                <div class="text-sm text-gray-600">
+                                                    <span class="inline-flex items-center mr-3">📦 ${plan.pallets} pallets</span>
+                                                    <span class="inline-flex items-center">📋 ${plan.orders} orders</span>
+                                                </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="font-semibold text-green-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
-                                                <div class="text-sm text-gray-600">Dispatch: ${plan.date}</div>
+                                                <div class="font-semibold text-blue-600">
+                                                    🚚 ${plan.trucks.length > 0 ? plan.trucks.map(t => getTruckTypeName(t.type)).join(', ') : 'Standard Truck'}
+                                                </div>
+                                                <div class="text-sm text-gray-600">$${plan.cost?.toLocaleString() || 'TBD'} • Due: ${plan.deadline}</div>
                                             </div>
-                                        </div>
-                                        <div class="text-xs text-gray-600">
-                                            ${plan.trucks.map(t => `${t.pallets} pallets in ${getTruckTypeName(t.type)}`).join(' + ')}
                                         </div>
                                     </div>
                                 `).join('')}
@@ -649,18 +653,20 @@
                             <div class="space-y-3">
                                 ${scenario.dispatchPlan.map((plan, index) => `
                                     <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                        <div class="flex justify-between items-start mb-2">
+                                        <div class="flex justify-between items-start">
                                             <div>
-                                                <div class="font-semibold text-gray-900">Day ${index + 1}: ${plan.date}</div>
-                                                <div class="text-sm text-gray-600">${plan.orders} order(s) • ${plan.pallets} pallets</div>
+                                                <div class="font-semibold text-gray-900">📅 ${plan.date}</div>
+                                                <div class="text-sm text-gray-600">
+                                                    <span class="inline-flex items-center mr-3">📦 ${plan.pallets} pallets</span>
+                                                    <span class="inline-flex items-center">📋 ${plan.orders} orders</span>
+                                                </div>
                                             </div>
                                             <div class="text-right">
-                                                <div class="font-semibold text-green-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
-                                                <div class="text-sm text-gray-600">${plan.trucks.length} truck(s)</div>
+                                                <div class="font-semibold text-blue-600">
+                                                    🚚 ${plan.trucks.length > 0 ? plan.trucks.map(t => getTruckTypeName(t.type)).join(', ') : 'Standard Truck'}
+                                                </div>
+                                                <div class="text-sm text-gray-600">$${plan.cost?.toLocaleString() || 'TBD'}</div>
                                             </div>
-                                        </div>
-                                        <div class="text-xs text-gray-600">
-                                            Trucks: ${plan.trucks.map(t => `${t.pallets}/${t.capacity} ${getTruckTypeName(t.type)}`).join(', ')}
                                         </div>
                                     </div>
                                 `).join('')}
