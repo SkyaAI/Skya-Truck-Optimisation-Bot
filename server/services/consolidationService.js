@@ -1732,18 +1732,32 @@ class ConsolidationService {
   }
 
   recommendTruckCompanies(scenario) {
+    // Skip truck company recommendations for multi-route scenarios
+    if (scenario.isMultiRoute || scenario.isCrossRoute || 
+        scenario.routeGroup?.sourceCity === 'Multiple' ||
+        scenario.routeGroup?.destinationCity === 'Multiple' ||
+        scenario.type?.includes('multi-route') ||
+        scenario.type?.includes('parallel') ||
+        scenario.type?.includes('sequential') ||
+        scenario.type?.includes('deadline-coordination')) {
+      return [];
+    }
+    
     const truckConfig = scenario.truckConfiguration || [];
+    const routeGroup = scenario.routeGroup || {};
+    
     const criteria = {
       truckType: truckConfig.length > 0 ? truckConfig[0].type : 'SEMI',
-      sourceLocation: scenario.routeGroup.sourceCity,
-      destinationLocation: scenario.routeGroup.destinationCity,
-      urgency: scenario.routeGroup.urgentOrders > 0 ? 'urgent' : 'standard',
+      sourceLocation: routeGroup.sourceCity || 'Multiple Locations',
+      destinationLocation: routeGroup.destinationCity || 'Multiple Destinations',
+      urgency: (routeGroup.urgentOrders && routeGroup.urgentOrders > 0) ? 'urgent' : 'standard',
       prioritizeBy: scenario.type === 'immediate' ? 'time' : 'cost'
     };
 
-    const recommendations = truckCompanyService.recommendCompanies(criteria);
-    
-    return recommendations.map(company => ({
+    try {
+      const recommendations = truckCompanyService.recommendCompanies(criteria);
+      
+      return recommendations.map(company => ({
       ...company,
       estimatedCost: Math.round(scenario.estimatedCost * company.estimatedCostMultiplier),
       estimatedTime: Math.round(scenario.estimatedTime * company.estimatedTimeBonus * 10) / 10,
